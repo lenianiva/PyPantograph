@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "pantograph"
+version = "0.1.0"
+description = "A machine-to-machine interaction system for Lean"
+authors = ["Leni Aniva <v@leni.sh>"]
+license = "GPL-3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

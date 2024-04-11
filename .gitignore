@@ -1,0 +1,6 @@
+.*
+!.gitignore
+
+# Python
+*.py[cod]
+*.egg-info
