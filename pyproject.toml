@@ -8,7 +8,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+pexpect = "^4.9.0"
 
+[tool.poetry.build]
+generate-setup-file = false
+script = "build.py"
 
 [build-system]
 requires = ["poetry-core"]
