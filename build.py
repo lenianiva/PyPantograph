@@ -12,3 +12,4 @@ with subprocess.Popen(["make"], cwd=PATH_PANTOGRAPH) as p:
 path_executable = PATH_PY / "pantograph"
 shutil.copyfile(PATH_PANTOGRAPH / ".lake/build/bin/pantograph", path_executable)
 os.chmod(path_executable, os.stat(path_executable).st_mode | stat.S_IEXEC)
+shutil.copyfile(PATH_PANTOGRAPH / "lean-toolchain", PATH_PY / "lean-toolchain")

@@ -1,7 +1,17 @@
-import json, pexpect, pathlib
+"""
+Class which manages a Pantograph instance. All calls to the kernel uses this
+interface.
+"""
+import json, pexpect, pathlib, unittest
+from pantograph.expr import Variable, Goal, GoalState
 
+def _get_proc_cwd():
+    return pathlib.Path(__file__).parent
 def _get_proc_path():
-    return pathlib.Path(__file__).parent / "pantograph"
+    return _get_proc_cwd() / "pantograph"
+
+class ServerError(Exception):
+    pass
 
 class Server:
 
@@ -17,6 +27,7 @@ class Server:
         self.timeout = timeout
         self.imports = imports
         self.maxread = maxread
+        self.proc_cwd = _get_proc_cwd()
         self.proc_path = _get_proc_path()
 
         self.options = options
@@ -30,7 +41,8 @@ class Server:
         self.proc = pexpect.spawn(
             f"{self.proc_path} {self.args}",
             encoding="utf-8",
-            maxread=self.maxread
+            maxread=self.maxread,
+            cwd=self.proc_cwd,
         )
         self.proc.setecho(False)
 
@@ -47,18 +59,50 @@ class Server:
     def reset(self):
         return self.run("reset", {})
 
-    def goal_start(self, expr: str):
-        return self.run('goal.start', {"expr": str(expr)})
-    def goal_tactic(self, stateId: int, goalId: int, tactic):
-        return self.run('goal.tactic', {"stateId": stateId, "goalId": goalId, "tactic": tactic})
+    def goal_start(self, expr: str) -> GoalState:
+        result = self.run('goal.start', {"expr": str(expr)})
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return GoalState(state_id = result["stateId"], goals = [Goal.sentence(expr)])
 
+    def goal_tactic(self, state: GoalState, goalId: int, tactic: str) -> GoalState:
+        result = self.run('goal.tactic', {
+            "stateId": state.state_id, "goalId": goalId, "tactic": tactic})
+        if "error" in result:
+            raise ServerError(result["desc"])
+        if "tacticErrors" in result:
+            raise ServerError(result["tacticErrors"])
+        if "parseError" in result:
+            raise ServerError(result["parseError"])
+        state_id = result["nextStateId"]
+        goals = [Goal._parse(payload) for payload in result["goals"]]
+        return GoalState(state_id, goals)
 
-def check_version():
+def get_version():
     import subprocess
-    with subprocess.Popen([_get_proc_path(), "--version"], stdout=subprocess.PIPE) as p:
-        v = p.communicate()[0].decode('utf-8').strip()
-        print(v)
+    with subprocess.Popen([_get_proc_path(), "--version"],
+                          stdout=subprocess.PIPE,
+                          cwd=_get_proc_cwd()) as p:
+        return p.communicate()[0].decode('utf-8').strip()
 
+
+class TestServer(unittest.TestCase):
+
+    def test_version(self):
+        self.assertEqual(get_version(), "0.2.14")
+
+    def test_goal_start(self):
+        server = Server()
+        state0 = server.goal_start("forall (p q: Prop), Or p q -> Or q p")
+        self.assertEqual(state0.state_id, 0)
+        state1 = server.goal_tactic(state0, goalId=0, tactic="intro a")
+        self.assertEqual(state1.state_id, 1)
+        self.assertEqual(state1.goals, [Goal(
+            variables=[Variable(name="a", t="Prop")],
+            target="∀ (q : Prop), a ∨ q → q ∨ a",
+            name=None,
+        )])
+        self.assertEqual(str(state1.goals[0]),"a : Prop\n⊢ ∀ (q : Prop), a ∨ q → q ∨ a")
 
 if __name__ == '__main__':
-    check_version()
+    unittest.main()
