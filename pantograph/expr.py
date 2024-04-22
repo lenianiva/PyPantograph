@@ -2,7 +2,7 @@
 Data structuers for expressions and goals
 """
 from dataclasses import dataclass
-from typing import Optional, Self
+from typing import Optional, Self, Union
 
 Expr = str
 
@@ -60,3 +60,12 @@ class GoalState:
     @property
     def is_solved(self) -> bool:
         return not self.goals
+
+@dataclass(frozen=True)
+class TacticNormal:
+    payload: str
+@dataclass(frozen=True)
+class TacticHave:
+    branch: str
+
+Tactic = Union[TacticNormal, TacticHave]
