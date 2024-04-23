@@ -16,7 +16,7 @@ class Variable:
     name: Optional[str] = None
 
     @staticmethod
-    def _parse(payload: dict) -> Self:
+    def parse(payload: dict) -> Self:
         name = payload.get("userName")
         t = parse_expr(payload["type"])
         v = payload.get("value")
@@ -43,9 +43,9 @@ class Goal:
         return Goal(variables=[], target=target)
 
     @staticmethod
-    def _parse(payload: dict) -> Self:
+    def parse(payload: dict) -> Self:
         name = payload.get("userName")
-        variables = [Variable._parse(v) for v in payload["vars"]]
+        variables = [Variable.parse(v) for v in payload["vars"]]
         target = parse_expr(payload["target"])
         is_conversion = payload["isConversion"]
         return Goal(variables, target, name, is_conversion)
@@ -62,13 +62,22 @@ class GoalState:
 
     @property
     def is_solved(self) -> bool:
+        """
+        WARNING: Does not handle dormant goals.
+        """
         return not self.goals
 
-@dataclass(frozen=True)
-class TacticNormal:
-    payload: str
+    @staticmethod
+    def parse(payload: dict) -> Self:
+        state_id = payload["nextStateId"]
+        goals = [Goal.parse(g) for g in payload["goals"]]
+        return GoalState(state_id, goals)
+
 @dataclass(frozen=True)
 class TacticHave:
     branch: str
+@dataclass(frozen=True)
+class TacticCalc:
+    step: str
 
-Tactic = Union[TacticNormal, TacticHave]
+Tactic = Union[str, TacticHave, TacticCalc]
