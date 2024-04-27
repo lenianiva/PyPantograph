@@ -1,8 +1,8 @@
 """
-Data structuers for expressions and goals
+Data structures for expressions and goals
 """
 from dataclasses import dataclass
-from typing import Optional, Self, Union
+from typing import Optional, Union
 
 Expr = str
 
@@ -16,7 +16,7 @@ class Variable:
     name: Optional[str] = None
 
     @staticmethod
-    def _parse(payload: dict) -> Self:
+    def _parse(payload: dict) -> "Variable":  # Replace 'Self' with 'Variable'
         name = payload.get("userName")
         t = parse_expr(payload["type"])
         v = payload.get("value")
@@ -39,11 +39,11 @@ class Goal:
     is_conversion: bool = False
 
     @staticmethod
-    def sentence(target: Expr) -> Self:
+    def sentence(target: Expr) -> "Goal":  # Replace 'Self' with 'Goal'
         return Goal(variables=[], target=target)
 
     @staticmethod
-    def _parse(payload: dict) -> Self:
+    def _parse(payload: dict) -> "Goal":  # Replace 'Self' with 'Goal'
         name = payload.get("userName")
         variables = [Variable._parse(v) for v in payload["vars"]]
         target = parse_expr(payload["target"])
@@ -52,8 +52,7 @@ class Goal:
 
     def __str__(self):
         front = "|" if self.is_conversion else "⊢"
-        return "\n".join(str(v) for v in self.variables) + \
-            f"\n{front} {self.target}"
+        return "\n".join(str(v) for v in self.variables) + f"\n{front} {self.target}"
 
 @dataclass(frozen=True)
 class GoalState:
@@ -67,6 +66,7 @@ class GoalState:
 @dataclass(frozen=True)
 class TacticNormal:
     payload: str
+
 @dataclass(frozen=True)
 class TacticHave:
     branch: str
