@@ -2,7 +2,7 @@
 Data structures for expressions and goals
 """
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 Expr = str
 
@@ -16,7 +16,7 @@ class Variable:
     name: Optional[str] = None
 
     @staticmethod
-    def _parse(payload: dict) -> "Variable":  # Replace 'Self' with 'Variable'
+    def parse(payload: dict) -> "Variable":  # Replace 'Self' with 'Variable'
         name = payload.get("userName")
         t = parse_expr(payload["type"])
         v = payload.get("value")
@@ -33,7 +33,7 @@ class Variable:
 
 @dataclass(frozen=True)
 class Goal:
-    variables: list[Variable]
+    variables: List[Variable]
     target: Expr
     name: Optional[str] = None
     is_conversion: bool = False
@@ -43,11 +43,11 @@ class Goal:
         return Goal(variables=[], target=target)
 
     @staticmethod
-    def _parse(payload: dict) -> "Goal":  # Replace 'Self' with 'Goal'
+    def parse(payload: dict) -> "Goal":  # Replace 'Self' with 'Goal'
         name = payload.get("userName")
-        variables = [Variable._parse(v) for v in payload["vars"]]
+        variables = [Variable.parse(v) for v in payload["vars"]]
         target = parse_expr(payload["target"])
-        is_conversion = payload["isConversion"]
+        is_conversion = payload.get("isConversion", False)  # Handle missing keys
         return Goal(variables, target, name, is_conversion)
 
     def __str__(self):
@@ -57,18 +57,27 @@ class Goal:
 @dataclass(frozen=True)
 class GoalState:
     state_id: int
-    goals: list[Goal]
+    goals: List[Goal]
 
     @property
     def is_solved(self) -> bool:
+        """
+        WARNING: Does not handle dormant goals.
+        """
         return not self.goals
 
-@dataclass(frozen=True)
-class TacticNormal:
-    payload: str
+    @staticmethod
+    def parse(payload: dict) -> "GoalState":  # Replace 'Self' with 'GoalState'
+        state_id = payload.get("nextStateId", 0)  # Handle missing keys
+        goals = [Goal.parse(g) for g in payload.get("goals", [])]
+        return GoalState(state_id, goals)
 
 @dataclass(frozen=True)
 class TacticHave:
     branch: str
 
-Tactic = Union[TacticNormal, TacticHave]
+@dataclass(frozen=True)
+class TacticCalc:
+    step: str
+
+Tactic = Union[str, TacticHave, TacticCalc]

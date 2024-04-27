@@ -8,8 +8,9 @@ Execute
 ```bash
 poetry build
 ```
-If the build is successful, the following command should succeed and output the current version of Pantograph.
+To run server tests:
 ``` bash
 python -m pantograph.server
 ```
+The tests in `pantograph/server.py` also serve as simple interaction examples
 
