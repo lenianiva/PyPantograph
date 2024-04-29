@@ -14,3 +14,5 @@ python -m pantograph.server
 ```
 The tests in `pantograph/server.py` also serve as simple interaction examples
 
+
+Test push
