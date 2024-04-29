@@ -78,7 +78,7 @@ export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.used --format=csv,no
 echo $CUDA_VISIBLE_DEVICES
 
 # make sure the PyPantrograph server tests by Leni work
-# python -m server.py
+python -m pantograph.server
 python $HOME/PyPantograph/pantograph/server.py
 python $HOME/PyPantograph/test_vllm.py
 ```
