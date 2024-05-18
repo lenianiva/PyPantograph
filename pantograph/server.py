@@ -3,7 +3,7 @@ Class which manages a Pantograph instance. All calls to the kernel uses this
 interface.
 """
 import json, pexpect, pathlib, unittest
-from pantograph.expr import Variable, Goal, GoalState, \
+from pantograph.expr import parse_expr, Expr, Variable, Goal, GoalState, \
     Tactic, TacticHave, TacticCalc
 
 def _get_proc_cwd():
@@ -75,6 +75,16 @@ class Server:
     def reset(self):
         return self.run("reset", {})
 
+    def expr_type(self, expr: str) -> Expr:
+        """
+        Evaluate the type of a given expression. This gives an error if the
+        input `expr` is ill-formed.
+        """
+        result = self.run('expr.echo', {"expr": expr})
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return parse_expr(result["type"])
+
     def goal_start(self, expr: str) -> GoalState:
         result = self.run('goal.start', {"expr": str(expr)})
         if "error" in result:
@@ -133,6 +143,11 @@ class TestServer(unittest.TestCase):
 
     def test_version(self):
         self.assertEqual(get_version(), "0.2.14")
+
+    def test_expr_type(self):
+        server = Server()
+        t = server.expr_type("forall (n m: Nat), n + m = m + n")
+        self.assertEqual(t, "Prop")
 
     def test_goal_start(self):
         server = Server()
