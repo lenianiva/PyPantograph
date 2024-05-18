@@ -77,11 +77,9 @@ class Server:
 
         Must be called periodically.
         """
-        self.run('goal.delete', {'stateIds': self.to_remove_goal_states})
-        self.to_remove_goal_states.clear()
-
-    def reset(self):
-        return self.run("reset", {})
+        if self.to_remove_goal_states:
+            self.run('goal.delete', {'stateIds': self.to_remove_goal_states})
+            self.to_remove_goal_states.clear()
 
     def expr_type(self, expr: str) -> Expr:
         """
