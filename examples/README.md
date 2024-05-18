@@ -7,8 +7,9 @@ pushd Example
 lake build
 popd
 ```
-This would generate compiled `.olean` files. Then run the example
+This would generate compiled `.olean` files. Then run the example from the
+project root:
 ``` sh
-python3 aesop.py
+poetry run examples/aesop.py
 ```
 
