@@ -2,7 +2,7 @@
 Class which manages a Pantograph instance. All calls to the kernel uses this
 interface.
 """
-import json, pexpect, pathlib, unittest
+import json, pexpect, pathlib, unittest, os
 from pantograph.expr import parse_expr, Expr, Variable, Goal, GoalState, \
     Tactic, TacticHave, TacticCalc
 
@@ -18,6 +18,8 @@ class Server:
 
     def __init__(self,
                  imports=["Init"],
+                 project_path=None,
+                 lean_path=None,
                  options=[],
                  timeout=20,
                  maxread=1000000):
@@ -27,8 +29,9 @@ class Server:
         """
         self.timeout = timeout
         self.imports = imports
+        self.project_path = project_path if project_path else _get_proc_cwd()
+        self.lean_path = lean_path
         self.maxread = maxread
-        self.proc_cwd = _get_proc_cwd()
         self.proc_path = _get_proc_path()
 
         self.options = options
@@ -42,11 +45,16 @@ class Server:
     def restart(self):
         if self.proc is not None:
             self.proc.close()
+        env = os.environ
+        if self.lean_path:
+            env = env | {'LEAN_PATH': self.lean_path}
+
         self.proc = pexpect.spawn(
             f"{self.proc_path} {self.args}",
             encoding="utf-8",
             maxread=self.maxread,
-            cwd=self.proc_cwd,
+            cwd=self.project_path,
+            env=env,
         )
         self.proc.setecho(False)
 
