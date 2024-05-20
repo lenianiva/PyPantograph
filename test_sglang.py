@@ -1,6 +1,5 @@
-# copy pasted from https://docs.vllm.ai/en/latest/getting_started/quickstart.html
 
-# do export VLLM_USE_MODELSCOPE=True
+
 import argparse
 from typing import Dict, List
 import os
@@ -8,22 +7,6 @@ import sglang as sgl
 from sglang import OpenAI, assistant, gen, set_default_backend, system, user
 
 
-def test_pytorch():
-    print('\n----- Test PyTorch ---')
-    # Print the PyTorch version and CUDA version
-    print(f"PyTorch version: {torch.__version__}")
-    print(f"CUDA version: {torch.version.cuda}")
-    
-    # Perform a matrix multiplication on CUDA and print the result
-    result = torch.randn(2, 4).cuda() @ torch.randn(4, 1).cuda()
-    print(f"Matrix multiplication result: {result}")
-    
-    # Check CUDA availability and device details
-    print(f'Number of CUDA devices: {torch.cuda.device_count()}')
-    if torch.cuda.device_count() > 0:
-        print(f'Device name: {torch.cuda.get_device_name(0)}')
-    else:
-        print("No CUDA devices available.")
 
 @sgl.function
 def multi_turn_question(s, question_1, question_2):
