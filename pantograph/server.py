@@ -38,6 +38,7 @@ def select_tactic(s, state):
         print(tmp["tactic"])
         tactic = extract_code_from_llm_output(tmp["tactic"])
     s += sgl.assistant("```"+tactic+"```")
+    return tactic
 
 
 
@@ -212,11 +213,19 @@ class TestServer(unittest.TestCase):
             ),
         ])
         state = select_tactic.run(str(state2))
+        tactic = state.ret_value
         for m in state.messages():
             print(m["role"], ":", m["content"])
 
         print("\n-- tactic --\n", state.stream_executor.variables)
-        print(state.stream_executor.arguments)
+        
+        state3 = server.goal_tactic(state2, goal_id=1, tactic=tactic)
+        print("==========state3============")
+        print(state3)
+        # state4 = server.goal_tactic(state3, goal_id=0, tactic="rw [Nat.add_assoc]")
+        # print("==========state4============")
+        # print(state4)        
+        # self.assertTrue(state4.is_solved)
 
 
         # print("==========state2============")
@@ -241,13 +250,6 @@ class TestServer(unittest.TestCase):
 
         # print()
 
-        # state3 = server.goal_tactic(state2, goal_id=1, tactic=TacticCalc("_ = a + 2"))
-        # print("==========state3============")
-        # print(state3)
-        # state4 = server.goal_tactic(state3, goal_id=0, tactic="rw [Nat.add_assoc]")
-        # print("==========state4============")
-        # print(state4)        
-        # self.assertTrue(state4.is_solved)
 
 
     def test_conv_calc(self):
