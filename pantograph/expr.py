@@ -60,6 +60,11 @@ class GoalState:
     state_id: int
     goals: list[Goal]
 
+    _sentinel: list[int]
+
+    def __del__(self):
+        self._sentinel.append(self.state_id)
+
     @property
     def is_solved(self) -> bool:
         """
@@ -68,10 +73,10 @@ class GoalState:
         return not self.goals
 
     @staticmethod
-    def parse(payload: dict) -> Self:
+    def parse(payload: dict, _sentinel: list[int]) -> Self:
         state_id = payload["nextStateId"]
         goals = [Goal.parse(g) for g in payload["goals"]]
-        return GoalState(state_id, goals)
+        return GoalState(state_id, goals, _sentinel)
 
 @dataclass(frozen=True)
 class TacticHave:
