@@ -7,6 +7,10 @@ Update submodule
 ``` bash
 git submodule update --init
 ```
+Install dependencies
+```bash
+poetry install
+```
 
 Execute
 ```bash
