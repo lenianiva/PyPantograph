@@ -2,7 +2,7 @@
 Data structuers for expressions and goals
 """
 from dataclasses import dataclass
-from typing import Optional, Self, Union
+from typing import Optional, Union
 
 Expr = str
 
@@ -16,7 +16,7 @@ class Variable:
     name: Optional[str] = None
 
     @staticmethod
-    def parse(payload: dict) -> Self:
+    def parse(payload: dict):
         name = payload.get("userName")
         t = parse_expr(payload["type"])
         v = payload.get("value")
@@ -39,11 +39,11 @@ class Goal:
     is_conversion: bool = False
 
     @staticmethod
-    def sentence(target: Expr) -> Self:
+    def sentence(target: Expr):
         return Goal(variables=[], target=target)
 
     @staticmethod
-    def parse(payload: dict) -> Self:
+    def parse(payload: dict):
         name = payload.get("userName")
         variables = [Variable.parse(v) for v in payload["vars"]]
         target = parse_expr(payload["target"])
@@ -73,7 +73,7 @@ class GoalState:
         return not self.goals
 
     @staticmethod
-    def parse(payload: dict, _sentinel: list[int]) -> Self:
+    def parse(payload: dict, _sentinel: list[int]):
         state_id = payload["nextStateId"]
         goals = [Goal.parse(g) for g in payload["goals"]]
         return GoalState(state_id, goals, _sentinel)
