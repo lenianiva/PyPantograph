@@ -137,6 +137,14 @@ class Server:
         return GoalState.parse(result, self.to_remove_goal_states)
 
 
+    def compile_tactics(self, module: str) -> list[tuple[str, str, str]]:
+        result = self.run('compile.tactics', {'module': module})
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return [(i['goalBefore'], i['tactic'], i['goalAfter']) for i in result['invocations']]
+
+
+
 def get_version():
     import subprocess
     with subprocess.Popen([_get_proc_path(), "--version"],
