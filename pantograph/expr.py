@@ -2,7 +2,7 @@
 Data structures for expressions and goals
 """
 from dataclasses import dataclass
-from typing import Optional, Union, List
+from typing import Optional, Union
 
 Expr = str
 
@@ -16,7 +16,7 @@ class Variable:
     name: Optional[str] = None
 
     @staticmethod
-    def parse(payload: dict) -> "Variable":  # Replace 'Self' with 'Variable'
+    def parse(payload: dict):
         name = payload.get("userName")
         t = parse_expr(payload["type"])
         v = payload.get("value")
@@ -39,11 +39,11 @@ class Goal:
     is_conversion: bool = False
 
     @staticmethod
-    def sentence(target: Expr) -> "Goal":  # Replace 'Self' with 'Goal'
+    def sentence(target: Expr):
         return Goal(variables=[], target=target)
 
     @staticmethod
-    def parse(payload: dict) -> "Goal":  # Replace 'Self' with 'Goal'
+    def parse(payload: dict) -> Self:
         name = payload.get("userName")
         variables = [Variable.parse(v) for v in payload["vars"]]
         target = parse_expr(payload["target"])
@@ -59,6 +59,16 @@ class GoalState:
     state_id: int
     goals: List[Goal]
 
+    _sentinel: list[int]
+
+    def __del__(self):
+        self._sentinel.append(self.state_id)
+
+    _sentinel: list[int]
+
+    def __del__(self):
+        self._sentinel.append(self.state_id)
+
     @property
     def is_solved(self) -> bool:
         """
@@ -67,10 +77,10 @@ class GoalState:
         return not self.goals
 
     @staticmethod
-    def parse(payload: dict) -> "GoalState":  # Replace 'Self' with 'GoalState'
-        state_id = payload.get("nextStateId", 0)  # Handle missing keys
-        goals = [Goal.parse(g) for g in payload.get("goals", [])]
-        return GoalState(state_id, goals)
+    def parse(payload: dict, _sentinel: list[int]):
+        state_id = payload["nextStateId"]
+        goals = [Goal.parse(g) for g in payload["goals"]]
+        return GoalState(state_id, goals, _sentinel)
 
 @dataclass(frozen=True)
 class TacticHave:
