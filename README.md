@@ -4,7 +4,7 @@ Python interface to the Pantograph library
 
 ## Getting started
 
-First initialize the git submodules so that git can keep track of the submodules being used do:
+<!-- First initialize the git submodules so that git can keep track of the submodules being used do:
 ```bash
 # - initialize the git submodules by preparing the git repository, but it does not clone or fetch them, just init's git's internal configs
 git submodule init
@@ -25,7 +25,7 @@ To run server tests:
 ``` bash
 python -m pantograph.server
 ```
-The tests in `pantograph/server.py` also serve as simple interaction examples
+The tests in `pantograph/server.py` also serve as simple interaction examples -->
 
 ## Install 1: With Conda and Pip in the SNAP cluster
 
