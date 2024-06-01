@@ -7,9 +7,12 @@ pushd Example
 lake build
 popd
 ```
-This would generate compiled `.olean` files. Then run the example from the
+This would generate compiled `.olean` files. Then run one of the examples from the
 project root:
 ``` sh
 poetry run examples/aesop.py
+poetry run examples/data.py
 ```
+
+Warning: If you make modifications to any Lean files, you must re-run `lake build`!
 
