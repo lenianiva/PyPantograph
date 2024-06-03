@@ -3,14 +3,14 @@
 Python interface to the Pantograph library
 
 ## Getting started
-Update submodule
+<!-- Update submodule
 ``` bash
 git submodule update --init
 ```
 Install dependencies
 ```bash
 poetry install
-```
+``` -->
 
 <!-- First initialize the git submodules so that git can keep track of the submodules being used do:
 ```bash
