@@ -3,49 +3,20 @@
 Python interface to the Pantograph library
 
 # Getting started
-<!-- Update submodule
-``` bash
-git submodule update --init
-```
-Install dependencies
-```bash
-poetry install
-``` -->
-
-<!-- First initialize the git submodules so that git can keep track of the submodules being used do:
-```bash
-# - initialize the git submodules by preparing the git repository, but it does not clone or fetch them, just init's git's internal configs
-git submodule init
-```
-Then to clone, fetch & update the submodules code (and also initilize anything you might have forgotten that is specificed in the `.gitmodules` file):
-```bash
-# - initialize the git submodules so that git can track them and then the update clone/fetches & updates the submodules
-git submodule update --init
-```
-
-Then install poetry by (e.g., [by following poetry's official instructions](https://python-poetry.org/docs/#installing-manually)).
-
-Then once you confirm you have poetry & the initialized git submodules, execute:
-```bash
-poetry build
-```
-To run server tests:
-``` bash
-python -m pantograph.server
-```
-The tests in `pantograph/server.py` also serve as simple interaction examples -->
 
 ## Install 1: With Conda and Pip in the SNAP cluster
 
 ```bash
-# - Install Lean4 manually (elan and lake), 1st one is the SNAP one, 2nd is the most common one
+# - Install Lean 4 manually (elan & lake): gets install script (doesn't save it) & directly gives it to sh to install it 
 curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+# (install command from the Lean4 official instlal guide, not the one we use)
 # curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s
 
 # - Make sure Lean4 tools (lean, lake) are available 
+echo $PATH | tr ':' '\n'
 export PATH="$HOME/.elan/bin:$PATH"
 echo 'export PATH="$HOME/.elan/bin:$PATH"' >> ~/.bashrc
-bash
+# bash
 elan
 lake
 
