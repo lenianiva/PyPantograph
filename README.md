@@ -2,7 +2,7 @@
 
 Python interface to the Pantograph library
 
-## Getting started
+# Getting started
 <!-- Update submodule
 ``` bash
 git submodule update --init
