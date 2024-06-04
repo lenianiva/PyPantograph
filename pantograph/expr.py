@@ -78,6 +78,9 @@ class GoalState:
         goals = [Goal.parse(g) for g in payload["goals"]]
         return GoalState(state_id, goals, _sentinel)
 
+    def __str__(self):
+        return "\n".join([str(g) for g in self.goals])
+
 @dataclass(frozen=True)
 class TacticHave:
     branch: str
