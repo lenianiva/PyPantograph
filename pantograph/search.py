@@ -3,7 +3,7 @@ from typing import override, Optional
 import collections, unittest
 
 from pantograph.server import Server, TacticFailure
-from pantograph.expr import Expr, Tactic, Goal, GoalState
+from pantograph.expr import Expr, Tactic, GoalState
 
 
 @dataclass
@@ -25,7 +25,6 @@ class SearchState:
     @property
     def is_solved(self) -> bool:
         return all(self.solved)
-
 
 
 class Agent:
@@ -121,6 +120,7 @@ class Agent:
         self.reset()
         return False
 
+
 class DumbAgent(Agent):
 
     def __init__(self):
@@ -159,6 +159,7 @@ class DumbAgent(Agent):
         self.goal_tactic_id_map[key] = i + 1
         return tactics[i]
 
+
 class TestSearch(unittest.TestCase):
 
     def test_solve(self):
@@ -174,6 +175,7 @@ class TestSearch(unittest.TestCase):
         agent = DumbAgent()
         flag = agent.search(server=server, target="∀ (p q: Prop), Or p q -> Or q p", verbose=True)
         self.assertTrue(flag)
+
 
 if __name__ == '__main__':
     unittest.main()
