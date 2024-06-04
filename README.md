@@ -45,7 +45,8 @@ git submodule update --init
 
 # - For snap make sure the repo is sym linked you're using your
 git clone git@github.com:lenianiva/PyPantograph.git
-git checkout <your-branch>
+# git checkout <your-branch>
+git checkout brando
 ln -s $AFS/PyPantograph $HOME/PyPantograph
 
 # - Build the PyPantograph proj (build the py distribution, py deps and custom (lean4) installs). Note: pip install -e doesn't work on the dist .whl builds etc so you instead the next command
@@ -61,13 +62,8 @@ pip list | grep pantograph
 pip list | grep vllm
 pip list | grep torch
 
-# - Select freeiest GPU wrt vRAM
-export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.used --format=csv,nounits,noheader | awk '{print NR-1 " " $1}' | sort -nk2 | head -n1 | cut -d' ' -f1)
-echo $CUDA_VISIBLE_DEVICES
-
 # - Make sure the PyPantrograph server tests by Leni work
 cd ~/PyPantograph
-# python -m pantograph.server
 python $HOME/PyPantograph/pantograph/server.py
 python $HOME/PyPantograph/test_vllm.py
 ```
