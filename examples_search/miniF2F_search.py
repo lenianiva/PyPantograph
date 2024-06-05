@@ -77,8 +77,8 @@ if __name__ == '__main__':
     parser.add_argument('--use-hammer', action='store_true')
     parser.add_argument('--validation', action='store_true')
     parser.add_argument('--use-llm', action='store_true')
-    parser.add_argument('-s', '--max-steps', default=200)
-    parser.add_argument('-t', '--max-trials-per-goal', default=4)
+    parser.add_argument('-s', '--max-steps', default=50)
+    parser.add_argument('-t', '--max-trials-per-goal', default=2)
     args = parser.parse_args()
 
     project_path, lean_path = get_project_and_lean_path()
