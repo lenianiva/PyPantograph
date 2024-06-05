@@ -17,6 +17,13 @@ class SearchState:
     def __post_init__(self):
         assert len(self.priorities) == len(self.state.goals)
         self.solved = [False for _ in self.state.goals]
+        self.trials = [0 for _ in self.state.goals]
+
+    @property
+    def next_goal_id(self) -> int:
+        goal_id, _ = max([(i, prio) for i, prio in enumerate(self.priorities) if not self.solved[i]],
+                        key=lambda x:x[1])
+        return goal_id
 
     @property
     def is_root(self) -> bool:
@@ -55,7 +62,8 @@ class Agent:
                target: Expr,
                informal_stmt: str = "",
                informal_proof: str = "",
-               max_steps: int = 1000,
+               max_steps: int = 100,
+               max_trial_per_goal: int = 5,
                verbose: bool = False) -> SearchResult:
 
         search_stack = [SearchState(state=server.goal_start(target),
@@ -89,11 +97,15 @@ class Agent:
                 continue
 
             # Find the unsolved goal with the highest priority
-            goal_id, _ = max([(i, prio) for i, prio in enumerate(search_state.priorities) if not search_state.solved[i]],
-                             key=lambda x:x[1])
+            goal_id = search_state.next_goal_id
 
-            # Generate tactic for this goal
-            tactic = self.next_tactic(search_state.state, goal_id, informal_stmt, informal_proof)
+            if search_state.trials[goal_id] > max_trial_per_goal:
+                # force halt the search
+                tactic = None
+            else:
+                # Generate tactic for this goal
+                tactic = self.next_tactic(search_state.state, goal_id, informal_stmt, informal_proof)
+
             print("????next tactic: ", tactic)
             if not tactic:
                 # pop the current state and continue to the next

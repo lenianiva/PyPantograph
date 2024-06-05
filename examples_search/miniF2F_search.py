@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import subprocess, json, argparse
+from typing import Optional
 from pathlib import Path
 from pantograph.server import Server
 from pantograph.search import SearchResult
@@ -16,10 +17,16 @@ def read_test_data(use_valid: bool):
     with open(jsonl_path, 'r') as f:
         return [json.loads(l) for l in list(f)]
 
-def try_test_data(server, agent, entry: dict, max_steps: int) -> SearchResult:
+def try_test_data(server, agent, entry: dict, max_steps: int) -> Optional[SearchResult]:
     e = entry["formal_statement"]
     informal_stmt = entry["informal_stmt"]
     informal_proof = entry["informal_proof"]
+
+    key_position = e.find('theorem')
+    if key_position == -1:
+        # Can't output anything for this one
+        return None
+    e = e[key_position:]
     key_theorem, name, e = e.split(' ', 2)
     e, tail = e.split(':=', 1)
     target = "forall " + ','.join(e.rsplit(':', 1))
@@ -45,7 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--use-hammer', action='store_true')
     parser.add_argument('--validation', action='store_true')
     parser.add_argument('--use-llm', action='store_true')
-    parser.add_argument('-s', '--max-steps', default=1000)
+    parser.add_argument('-s', '--max-steps', default=200)
     args = parser.parse_args()
 
     project_path, lean_path = get_project_and_lean_path()
@@ -56,7 +63,14 @@ if __name__ == '__main__':
     server = Server(imports=["Mathlib"], project_path=project_path, lean_path=lean_path)
     agent = LLMAgent(server, use_hammer=args.use_hammer, use_llm=args.use_llm)
     for datum in test_data:
-        result = try_test_data(server, agent, datum, max_steps=args.max_steps)
         file_name = output_file_name(datum, args.use_hammer, args.use_llm)
-        with open(file_name, 'w') as f:
-            json.dump({ 'id': datum['id'], 'success': result.success, 'steps': result.steps  }, f)
+        if file_name.is_file():
+            print(f"Skipping {datum['id']}")
+            continue
+        result = try_test_data(server, agent, datum, max_steps=args.max_steps)
+        if result is None:
+            with open(file_name + '-placeholder', 'w') as f:
+                json.dump({ 'id': datum['id'] }, f)
+        else:
+            with open(file_name, 'w') as f:
+                json.dump({ 'id': datum['id'], 'success': result.success, 'steps': result.steps  }, f)

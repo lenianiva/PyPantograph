@@ -98,6 +98,7 @@ class Server:
     def goal_start(self, expr: Expr) -> GoalState:
         result = self.run('goal.start', {"expr": str(expr)})
         if "error" in result:
+            print(f"Cannot start goal: {expr}")
             raise ServerError(result["desc"])
         return GoalState(state_id=result["stateId"], goals=[Goal.sentence(expr)], _sentinel=self.to_remove_goal_states)
 
