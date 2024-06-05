@@ -90,7 +90,7 @@ def multi_turn_question(s, question_1, question_2):
 @sgl.function
 def select_tactic(s, server, state, goal_id, feedback_turns = 5):
     
-    s += sgl.system("You are an expert in Lean. Choose the next one tactic to run given the current proof state and goals.")
+    s += sgl.system("You are an expert in Lean. Choose the next ONE tactic to run given the current proof state and goals.")
     s += sgl.user(LEAN4_REWRITE)
     s += sgl.user("The current proof state: GoalState(state_id=0, goals=[Goal(variables=[], target='∀ (a b: Nat), (b = 2) -> 1 + a + 1 = a + b', name=None, is_conversion=False)])")
     s += sgl.assistant("```intros a b h```")
