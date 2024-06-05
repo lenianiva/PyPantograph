@@ -8,26 +8,35 @@ import sglang as sgl
 
 class LLMAgent(Agent):
 
-    def __init__(self, server):
+    def __init__(self, server,
+                 use_hammer=True, use_llm=True):
         super().__init__()
         self.n_trials = 5
         self.server = server
         sgl.set_default_backend(sgl.OpenAI("gpt-4"))
 
         self.goal_tactic_id_map = collections.defaultdict(lambda : 0)
-        self.tactics = [
-            "aesop",
-            #"simp",
-            #"rfl",
-            #"decide",
-        ]
+
+        self.use_hammer = use_hammer
+        self.use_llm = use_llm
+        if use_hammer:
+            self.tactics = [
+                "aesop",
+                #"simp",
+                #"rfl",
+                #"decide",
+            ]
+        else:
+            self.tactics = []
 
     def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str="",  informal_proof:str="") -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 
         target = state.goals[goal_id].target
-        if i >= len(self.tactics):
+        if i >= len(self.tactics) and not self.use_llm:
+            return None
+        elif i >= len(self.tactics):
             new_state = None
             for ii in range(self.n_trials):
                 print(f"===============trail {str(ii)}============")

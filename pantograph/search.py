@@ -26,6 +26,11 @@ class SearchState:
     def is_solved(self) -> bool:
         return all(self.solved)
 
+@dataclass(frozen=True)
+class SearchResult:
+
+    success: bool
+    steps: int
 
 class Agent:
 
@@ -51,7 +56,7 @@ class Agent:
                informal_stmt: str = "",
                informal_proof: str = "",
                max_steps: int = 1000,
-               verbose: bool = False) -> bool:
+               verbose: bool = False) -> SearchResult:
 
         search_stack = [SearchState(state=server.goal_start(target),
                                     parent=None,
@@ -76,7 +81,7 @@ class Agent:
                     if verbose:
                         print("Search complete: Root state solved")
                     self.reset()
-                    return True
+                    return SearchResult(success=True, steps=i_step)
 
                 search_stack.pop(-1)
                 assert not search_stack[search_state.parent].solved[search_state.parent_goal_id]
@@ -97,7 +102,7 @@ class Agent:
                     if verbose:
                         print("Tactic list has been exhausted")
                     self.reset()
-                    return False
+                    return SearchResult(success=False, steps=i_step)
                 continue
 
             try:
@@ -123,7 +128,7 @@ class Agent:
             print("Search iteration limit exhausted")
 
         self.reset()
-        return False
+        return SearchResult(success=False, steps=max_steps)
 
 
 class DumbAgent(Agent):
