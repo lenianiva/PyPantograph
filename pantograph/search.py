@@ -29,7 +29,7 @@ class SearchState:
 
 class Agent:
 
-    def next_tactic(self, state: GoalState, goal_id: int) -> Optional[Tactic]:
+    def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str,  informal_proof:str) -> Optional[Tactic]:
         """
         Implement this function to generate the next tactic for a goal
         """
@@ -48,6 +48,8 @@ class Agent:
     def search(self,
                server: Server,
                target: Expr,
+               informal_stmt: str = "",
+               informal_proof: str = "",
                max_steps: int = 1000,
                verbose: bool = False) -> bool:
 
@@ -84,7 +86,7 @@ class Agent:
                              key=lambda x:x[1])
 
             # Generate tactic for this goal
-            tactic = self.next_tactic(search_state.state, goal_id)
+            tactic = self.next_tactic(search_state.state, goal_id, informal_stmt, informal_proof)
             if not tactic:
                 # pop the current state and continue to the next
                 search_stack.pop(-1)
@@ -140,7 +142,7 @@ class DumbAgent(Agent):
             "assumption",
         ]
 
-    def next_tactic(self, state: GoalState, goal_id: int) -> Optional[Tactic]:
+    def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str,  informal_proof:str) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 

@@ -17,12 +17,14 @@ def read_test_data():
 
 def try_test_data(server, agent, entry) -> bool:
     e = entry["formal_statement"]
+    informal_stmt = entry["informal_stmt"]
+    informal_proof = entry["informal_proof"]
     key_theorem, name, e = e.split(' ', 2)
     e, tail = e.split(':=', 1)
     target = "forall " + ','.join(e.rsplit(':', 1))
     print(f"Target: {target}")
     agent = LLMAgent(server)
-    return agent.search(server=server, target=target, verbose=True)
+    return agent.search(server=server, target=target, informal_stmt = informal_stmt, informal_proof = informal_proof,verbose=True)
 
 if __name__ == '__main__':
     project_path, lean_path = get_project_and_lean_path()

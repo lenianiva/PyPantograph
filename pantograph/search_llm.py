@@ -21,6 +21,7 @@ class LLMAgent(Agent):
         self.tactics = [
             "intro h",
             "cases h",
+            "simp",
             "apply Or.inl",
             "apply Or.inr",
         ]
@@ -28,7 +29,7 @@ class LLMAgent(Agent):
             "assumption",
         ]
 
-    def next_tactic(self, state: GoalState, goal_id: int) -> Optional[Tactic]:
+    def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str,  informal_proof:str) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 
@@ -47,7 +48,7 @@ class LLMAgent(Agent):
         new_state = None
         for ii in range(self.n_trials):
             print(f"===============trail {str(ii)}============")
-            s = select_tactic.run(server = self.server, state=state, goal_id = goal_id)
+            s = select_tactic.run(server = self.server, state=state, goal_id = goal_id, informal_stmt=informal_stmt,  informal_proof=informal_proof)
             tactic, new_state = s.ret_value
             for m in s.messages():
                 print(m["role"], ":", m["content"])

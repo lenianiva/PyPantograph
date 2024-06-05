@@ -88,7 +88,7 @@ def multi_turn_question(s, question_1, question_2):
 
 
 @sgl.function
-def select_tactic(s, server, state, goal_id, feedback_turns = 5):
+def select_tactic(s, server, state, goal_id,informal_stmt="",  informal_proof="", feedback_turns = 5):
     
     s += sgl.system("You are an expert in Lean. Choose the next ONE tactic to run given the current proof state and goals.")
     s += sgl.user(LEAN4_REWRITE)
@@ -96,7 +96,10 @@ def select_tactic(s, server, state, goal_id, feedback_turns = 5):
     s += sgl.assistant("```intros a b h```")
     s += sgl.user("The current proof state: GoalState(state_id=1, goals=[Goal(variables=[Variable(t='Nat', v=None, name='a'), Variable(t='Nat', v=None, name='b'), Variable(t='b = 2', v=None, name='h')], target='1 + a + 1 = a + b', name=None, is_conversion=False)])")
     s += sgl.assistant('TacticCalc("1 + a + 1 = a + 1 + 1")')
-    s += sgl.user("The current proof state: " + str(state))
+    if informal_stmt and informal_proof:
+        s += sgl.user("informal theorem statement: "+ informal_stmt)
+        s += sgl.user("informal proof: " + informal_proof)
+    s += sgl.user("The current proof state: " + str(state) + "")
     for i in range(feedback_turns):
         with s.copy() as tmp:
             tmp += sgl.assistant(sgl.gen("tactic", max_tokens=64))
