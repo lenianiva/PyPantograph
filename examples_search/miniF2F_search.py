@@ -31,7 +31,5 @@ if __name__ == '__main__':
 
     test_data = read_test_data()
     server = Server(imports=["Mathlib"], project_path=project_path, lean_path=lean_path)
-    target = "∀ (b h v : ℝ)  (h₀ : 0 < b ∧ 0 < h ∧ 0 < v)  (h₁ : v = 1 / 3 * (b * h))  (h₂ : b = 30)  (h₃ : h = 13 / 2) , v = 65"
-    # target = "theorem mathd_algebra_478\n  (b h v : ℝ)\n  (h₀ : 0 < b ∧ 0 < h ∧ 0 < v)\n  (h₁ : v = 1 / 3 * (b * h))\n  (h₂ : b = 30)\n  (h₃ : h = 13 / 2) :\n  v = 65 := sorry"
     agent = LLMAgent(server)
     try_test_data(server, agent, test_data[0])
