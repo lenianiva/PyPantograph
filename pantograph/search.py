@@ -63,7 +63,7 @@ class Agent:
                informal_stmt: str = "",
                informal_proof: str = "",
                max_steps: int = 100,
-               max_trial_per_goal: int = 5,
+               max_trials_per_goal: int = 5,
                verbose: bool = False) -> SearchResult:
 
         search_stack = [SearchState(state=server.goal_start(target),
@@ -99,7 +99,7 @@ class Agent:
             # Find the unsolved goal with the highest priority
             goal_id = search_state.next_goal_id
 
-            if search_state.trials[goal_id] > max_trial_per_goal:
+            if search_state.trials[goal_id] > max_trials_per_goal:
                 # force halt the search
                 tactic = None
             else:
@@ -118,6 +118,7 @@ class Agent:
                 continue
 
             try:
+                search_state.trials[goal_id] += 1
                 state = search_state.state
                 if verbose:
                     print(f"{state.state_id}.{goal_id}: {tactic} on {search_state.state.goals[goal_id]}")

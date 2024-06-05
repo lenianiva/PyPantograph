@@ -13,7 +13,9 @@ class LLMAgent(Agent):
         super().__init__()
         self.n_trials = 5
         self.server = server
-        sgl.set_default_backend(sgl.OpenAI("gpt-4"))
+
+        if use_llm:
+            sgl.set_default_backend(sgl.OpenAI("gpt-4"))
 
         self.goal_tactic_id_map = collections.defaultdict(lambda : 0)
 
@@ -37,6 +39,7 @@ class LLMAgent(Agent):
         if i >= len(self.tactics) and not self.use_llm:
             return None
         elif i >= len(self.tactics):
+            assert self.use_llm
             new_state = None
             for ii in range(self.n_trials):
                 print(f"===============trail {str(ii)}============")
