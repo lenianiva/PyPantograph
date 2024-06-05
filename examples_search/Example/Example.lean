@@ -1,3 +1,3 @@
-import Import.Mathlib
+import Mathlib
 
 -- Ensure that Aesop is running
