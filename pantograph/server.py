@@ -60,6 +60,8 @@ class Server:
         )
         self.proc.setecho(False)
 
+        self.run('options.set', {'printDependentMVars': True})
+
     def run(self, cmd, payload):
         """
         Runs a raw JSON command. Preferably use one of the commands below.

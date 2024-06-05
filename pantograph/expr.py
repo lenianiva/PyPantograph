@@ -1,7 +1,7 @@
 """
 Data structuers for expressions and goals
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Union
 
 Expr = str
@@ -35,6 +35,7 @@ class Variable:
 class Goal:
     variables: list[Variable]
     target: Expr
+    sibling_dep: list[int] = field(default_factory=lambda: [])
     name: Optional[str] = None
     is_conversion: bool = False
 
@@ -43,12 +44,16 @@ class Goal:
         return Goal(variables=[], target=target)
 
     @staticmethod
-    def parse(payload: dict):
+    def parse(payload: dict, sibling_map: dict[str, int]):
         name = payload.get("userName")
         variables = [Variable.parse(v) for v in payload["vars"]]
         target = parse_expr(payload["target"])
         is_conversion = payload["isConversion"]
-        return Goal(variables, target, name, is_conversion)
+
+        dependents = payload["target"]["dependentMVars"]
+        sibling_dep = [sibling_map[d] for d in dependents if d in sibling_map]
+
+        return Goal(variables, target, sibling_dep, name, is_conversion)
 
     def __str__(self):
         front = "|" if self.is_conversion else "⊢"
@@ -75,7 +80,8 @@ class GoalState:
     @staticmethod
     def parse(payload: dict, _sentinel: list[int]):
         state_id = payload["nextStateId"]
-        goals = [Goal.parse(g) for g in payload["goals"]]
+        goal_names = { g["name"]: i for i,g in enumerate(payload["goals"]) }
+        goals = [Goal.parse(g, goal_names) for g in payload["goals"]]
         return GoalState(state_id, goals, _sentinel)
 
     def __str__(self):
