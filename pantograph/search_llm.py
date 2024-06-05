@@ -19,11 +19,9 @@ class LLMAgent(Agent):
             "intro",
         ]
         self.tactics = [
-            "intro h",
-            "cases h",
             "simp",
-            "apply Or.inl",
-            "apply Or.inr",
+            "rfl",
+            "decide",
         ]
         self.no_space_tactics = [
             "assumption",
@@ -40,10 +38,8 @@ class LLMAgent(Agent):
             tactics = self.tactics
         else:
             tactics = self.no_space_tactics
-
         if i >= len(tactics):
             return None
-
         self.goal_tactic_id_map[key] = i + 1
         new_state = None
         for ii in range(self.n_trials):
