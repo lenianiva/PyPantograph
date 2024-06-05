@@ -15,16 +15,11 @@ class LLMAgent(Agent):
         sgl.set_default_backend(sgl.OpenAI("gpt-4"))
 
         self.goal_tactic_id_map = collections.defaultdict(lambda : 0)
-        self.intros = [
-            "intro",
-        ]
         self.tactics = [
-            "simp",
-            "rfl",
-            "decide",
-        ]
-        self.no_space_tactics = [
-            "assumption",
+            "aesop",
+            #"simp",
+            #"rfl",
+            #"decide",
         ]
 
     def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str="",  informal_proof:str="") -> Optional[Tactic]:
@@ -32,13 +27,7 @@ class LLMAgent(Agent):
         i = self.goal_tactic_id_map[key]
 
         target = state.goals[goal_id].target
-        if target.startswith('∀'):
-            tactics = self.intros
-        elif ' ' in target:
-            tactics = self.tactics
-        else:
-            tactics = self.no_space_tactics
-        if i >= len(tactics):
+        if i >= len(self.tactics):
             new_state = None
             for ii in range(self.n_trials):
                 print(f"===============trail {str(ii)}============")
@@ -51,13 +40,9 @@ class LLMAgent(Agent):
                 if tactic:
                     return tactic
             return None
-    
         else:
             self.goal_tactic_id_map[key] = i + 1
-            return tactics[i]
-
-
-
+            return self.tactics[i]
 
 class TestSearch(unittest.TestCase):
     

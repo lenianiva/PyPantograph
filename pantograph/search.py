@@ -73,6 +73,8 @@ class Agent:
             if search_state.is_solved:
                 # if the state is solved, propagate this solved status
                 if search_state.is_root:
+                    if verbose:
+                        print("Search complete: Root state solved")
                     self.reset()
                     return True
 
