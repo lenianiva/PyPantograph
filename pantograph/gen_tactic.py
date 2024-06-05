@@ -100,13 +100,13 @@ def select_tactic(s, server, state, goal_id, feedback_turns = 5):
     for i in range(feedback_turns):
         with s.copy() as tmp:
             tmp += sgl.assistant(sgl.gen("tactic", max_tokens=64))
-            print("==tmp===")
-            print(tmp["tactic"])
+            # print("==tmp===")
+            # print(tmp["tactic"])
             tactic = extract_code_from_llm_output(tmp["tactic"])
         s += sgl.assistant("```"+tactic+"```")
         success, new_state = apply_tactic(server, state, goal_id, tactic)
-        print("===execute===")
-        print(success, new_state )
+        # print("===execute===")
+        # print(success, new_state )
         if not success:
             with s.user():
                 s += "This answer got Lean compile error:\n" + str(new_state) + "\n"
@@ -118,7 +118,7 @@ def select_tactic(s, server, state, goal_id, feedback_turns = 5):
 
 def apply_tactic(server, state, goal_id, tactic):
     try:
-        new_state = server.goal_tactic(state, goal_id=goal_id, tactic=tactic)
+        new_state = server.goal_tactic(state=state, goal_id=goal_id, tactic=tactic)
     except ServerError as e:
         return False, e
     except TacticFailure as e:

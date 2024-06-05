@@ -47,23 +47,14 @@ class LLMAgent(Agent):
         new_state = None
         for ii in range(self.n_trials):
             print(f"===============trail {str(ii)}============")
-            try:
-                state = select_tactic.run(server = self.server, state=state, goal_id = goal_id)
-                tactic, new_state = state.ret_value
-                for m in state.messages():
-                    print(m["role"], ":", m["content"])
+            s = select_tactic.run(server = self.server, state=state, goal_id = goal_id)
+            tactic, new_state = s.ret_value
+            for m in s.messages():
+                print(m["role"], ":", m["content"])
 
-                print("\n-- new state --\n", new_state)
-                if tactic:
-                    return tactic
-                
-            except ServerError as e:
-                print(f"server error: {e}")
-                continue
-            except TacticFailure as e:
-                print(f"tactic failure: {e}")
-                continue
-        
+            print("\n-- new state --\n", new_state)
+            if tactic:
+                return tactic
 
         return tactics[i]
 
