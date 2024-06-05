@@ -87,6 +87,7 @@ class Agent:
 
             # Generate tactic for this goal
             tactic = self.next_tactic(search_state.state, goal_id, informal_stmt, informal_proof)
+            print("????next tactic: ", tactic)
             if not tactic:
                 # pop the current state and continue to the next
                 search_stack.pop(-1)
