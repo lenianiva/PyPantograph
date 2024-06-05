@@ -1,4 +1,4 @@
-from pantograph.server import Server, ServerError
+from pantograph.server import Server, ServerError, TacticFailure
 from pantograph.expr import Variable, Goal, TacticCalc
 import  unittest
 import sglang as sgl
@@ -105,18 +105,23 @@ def select_tactic(s, server, state, goal_id, feedback_turns = 5):
             tactic = extract_code_from_llm_output(tmp["tactic"])
         s += sgl.assistant("```"+tactic+"```")
         success, new_state = apply_tactic(server, state, goal_id, tactic)
+        print("===execute===")
+        print(success, new_state )
         if not success:
             with s.user():
                 s += "This answer got Lean compile error:\n" + str(new_state) + "\n"
                 s += "Please try again by taking the Lean compiler feedback."
             
         else:
-            return new_state
+            return tactic, new_state
+    return None, None
 
 def apply_tactic(server, state, goal_id, tactic):
     try:
         new_state = server.goal_tactic(state, goal_id=goal_id, tactic=tactic)
     except ServerError as e:
+        return False, e
+    except TacticFailure as e:
         return False, e
     return True, new_state
     

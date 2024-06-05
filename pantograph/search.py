@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import override, Optional
+from typing import  Optional
 import collections, unittest
 
 from pantograph.server import Server, TacticFailure
@@ -140,7 +140,6 @@ class DumbAgent(Agent):
             "assumption",
         ]
 
-    @override
     def next_tactic(self, state: GoalState, goal_id: int) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
