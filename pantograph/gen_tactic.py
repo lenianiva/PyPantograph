@@ -1,4 +1,4 @@
-from pantograph.server import Server, ServerError
+from pantograph.server import Server, ServerError, TacticFailure
 from pantograph.expr import Variable, Goal, TacticCalc
 import  unittest
 import sglang as sgl
@@ -88,35 +88,43 @@ def multi_turn_question(s, question_1, question_2):
 
 
 @sgl.function
-def select_tactic(s, server, state, goal_id, feedback_turns = 5):
+def select_tactic(s, server, state, goal_id,informal_stmt="",  informal_proof="", feedback_turns = 5):
     
-    s += sgl.system("You are an expert in Lean. Choose the next one tactic to run given the current proof state and goals.")
+    s += sgl.system("You are an expert in Lean. Choose the next ONE tactic to run given the current proof state and goals.")
     s += sgl.user(LEAN4_REWRITE)
     s += sgl.user("The current proof state: GoalState(state_id=0, goals=[Goal(variables=[], target='∀ (a b: Nat), (b = 2) -> 1 + a + 1 = a + b', name=None, is_conversion=False)])")
     s += sgl.assistant("```intros a b h```")
     s += sgl.user("The current proof state: GoalState(state_id=1, goals=[Goal(variables=[Variable(t='Nat', v=None, name='a'), Variable(t='Nat', v=None, name='b'), Variable(t='b = 2', v=None, name='h')], target='1 + a + 1 = a + b', name=None, is_conversion=False)])")
     s += sgl.assistant('TacticCalc("1 + a + 1 = a + 1 + 1")')
-    s += sgl.user("The current proof state: " + str(state))
+    if informal_stmt and informal_proof:
+        s += sgl.user("informal theorem statement: "+ informal_stmt)
+        s += sgl.user("informal proof: " + informal_proof)
+    s += sgl.user("The current proof state: " + str(state) + "")
     for i in range(feedback_turns):
         with s.copy() as tmp:
             tmp += sgl.assistant(sgl.gen("tactic", max_tokens=64))
-            print("==tmp===")
-            print(tmp["tactic"])
+            # print("==tmp===")
+            # print(tmp["tactic"])
             tactic = extract_code_from_llm_output(tmp["tactic"])
         s += sgl.assistant("```"+tactic+"```")
         success, new_state = apply_tactic(server, state, goal_id, tactic)
+        # print("===execute===")
+        # print(success, new_state )
         if not success:
             with s.user():
                 s += "This answer got Lean compile error:\n" + str(new_state) + "\n"
                 s += "Please try again by taking the Lean compiler feedback."
             
         else:
-            return new_state
+            return tactic, new_state
+    return None, None
 
 def apply_tactic(server, state, goal_id, tactic):
     try:
-        new_state = server.goal_tactic(state, goal_id=goal_id, tactic=tactic)
+        new_state = server.goal_tactic(state=state, goal_id=goal_id, tactic=tactic)
     except ServerError as e:
+        return False, e
+    except TacticFailure as e:
         return False, e
     return True, new_state
     
