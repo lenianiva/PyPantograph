@@ -1,4 +1,9 @@
-# Usage Example
+# Examples
+
+For a quick introduction of the API, fire up Jupyter and open `all.ipynb`.
+``` sh
+poetry run jupyter notebook
+```
 
 This example showcases how to bind library dependencies and execute the `Aesop`
 tactic in Lean. First build the example project:
