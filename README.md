@@ -93,7 +93,8 @@ lake
 
 # - Init the git submodules (i.e., make git aware of them/track them) + fetch/clone/update (and double check submodule is inited)
 git submodule init
-git submodule update --init
+git submodule update --init --recursive
+git clone git@github.com:lenianiva/PyPantograph.git --recurse-submodules
 
 # - For snap make sure the repo is sym linked you're using your
 git clone git@github.com:lenianiva/PyPantograph.git
@@ -120,6 +121,7 @@ poetry
 # poetry build
 
 # - Install pypantograph in editable mode with poetry
+cd $HOME/PyPantograph
 #Installs the project and its dependencies into the virtual environment, creating the environment if it doesn't exist, in editable mode. This will run our custom build for Lean already (the build.py file!)
 poetry install 
 # if it create a new python env, check it out
@@ -132,13 +134,9 @@ poetry shell
 poetry show | grep vllm
 poetry show | grep torch
 
-# - Select freeiest GPU wrt vRAM
-export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.used --format=csv,nounits,noheader | awk '{print NR-1 " " $1}' | sort -nk2 | head -n1 | cut -d' ' -f1)
-echo $CUDA_VISIBLE_DEVICES
-
 # - Make sure the PyPantrograph server tests by Leni work
 cd ~/PyPantograph
-# python -m pantograph.server
-python $HOME/PyPantograph/pantograph/server.py
-python $HOME/PyPantograph/test_vllm.py
+python -m pantograph.server
+# python $HOME/PyPantograph/pantograph/server.py
+# python $HOME/PyPantograph/test_vllm.py
 ```

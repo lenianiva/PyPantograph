@@ -1,0 +1,98 @@
+[
+    {
+        "nl_problem": ["Prove that for any natural number n, 0 + n = n."],
+        "nl_solution": [
+            "Consider any natural number n. We will prove the statement by induction on n.",
+            "Base case: When n = 0, we need to show that 0 + 0 = 0. This is true by the definition of addition.",
+            "Inductive step: Assume that for some natural number n, 0 + n = n. We need to show that 0 + (n + 1) = (n + 1). By the definition of addition and the inductive hypothesis, we have 0 + (n + 1) = (0 + n) + 1 = n + 1. Therefore, the statement holds for n + 1.",
+            "Thus, by induction, we have proved that for any natural number n, 0 + n = n."
+        ],
+        "nl_solution_sketch": [
+            "Consider any natural number n, and do induction on n.",
+            "Base case: 0 + 0 = 0 by properties of addition.",
+            "Inductive step we have 0 + n = n. Then 0 + (n + 1) = (0 + n) + 1 = n + 1.",
+            "Where, 0 + n = n by assumption,qed."
+        ],
+        "fl_problem": ["theorem zero_plus_n_proved_formal_sketch : ∀ n : ℕ, 0 + n = n := "],
+        "fl_partial_sketch": [
+            "by\n",
+            "  -- Consider some n in Nats.\n",
+            "  intro n\n",
+            "  -- Perform induction on n.\n",
+            "  induction n with\n",
+            "  | zero =>\n",
+            "    -- Base case: 0 + 0 = 0\n",
+            "    have h_base: 0 + 0 = 0 := <TODO_PROOF_OR_HAMMER>\n",
+            "    -- Combine facts to close goal\n",
+            "    <TODO_PROOF_OR_HAMMER>\n",
+            "  | succ n ih =>\n",
+            "    -- Inductive step: assume 0 + n = n, prove 0 + succ n = succ n\n",
+            "    have h_inductive: 0 + Nat.succ n = Nat.succ n := <TODO_PROOF_OR_HAMMER>\\n",
+            "    -- Combine facts to close goal\n",
+            "    <TODO_PROOF_OR_HAMMER>\n"
+        ],
+        "src_header_fl_problem": ["import Mathlib.Data.Nat.Basic"], 
+        "fl_header_sketch":  [
+            "import Mathlib.Data.Nat.Basic",
+            "import Aesop"
+        ],
+        "path_2_file": "~/gold-ai-olympiad/lean_src_proj/lean_basics/basic_nats_using_mathlib_nats2_simp_no_rw.lean",
+        "fl_statement_idx": "1"
+    },
+
+
+
+    {
+        "nl_problem": ["Prove that for any natural number n, m, and p, n + (m + p) = (n + m) + p."],
+        "nl_solution": [
+            "Consider any natural numbers n, m, and p. We will prove the statement by induction on n.",
+            "Base case: When n = 0, we need to show that 0 + (m + p) = (0 + m) + p. By the definition of addition, we have 0 + (m + p) = m + p and (0 + m) + p = m + p. Therefore, 0 + (m + p) = (0 + m) + p.",
+            "Inductive step: Assume that for some natural number n, n + (m + p) = (n + m) + p. We need to show that (n + 1) + (m + p) = ((n + 1) + m) + p.",
+            "1. First, pull out the successor from the left side to have the entire addition inside the successor: (n + 1) + (m + p) = (n + (m + p)) + 1.",
+            "2. By the inductive hypothesis, we know that n + (m + p) = (n + m) + p. So we can replace n + (m + p) with (n + m) + p inside the successor: (n + (m + p)) + 1 = ((n + m) + p) + 1.",
+            "3. Finally, push the successor on the left twice to align both sides: ((n + m) + p) + 1 = (n + 1) + (m + p) = ((n + 1) + m) + p.",
+            "Thus, by induction, we have proved that for any natural numbers n, m, and p, n + (m + p) = (n + m) + p."
+        ],
+        "nl_solution_sketch": [
+            "Consider any natural numbers n, m, and p. We will do induction on n.",
+            "Base case: 0 + (m + p) = (0 + m) + p by properties of addition.",
+            "Inductive step, we have n + (m + p) = (n + m) + p. Then (n + 1) + (m + p) = (n + (m + p)) + 1 = ((n + m) + p) + 1.",
+            "Thus, (n + 1) + (m + p) = ((n + 1) + m) + p, qed."
+        ],
+        "fl_problem": ["theorem add_assoc_proved_formal_sketch : ∀ n m p : ℕ, n + (m + p) = (n + m) + p := "],
+        "fl_partial_sketch": [
+            "by\n",
+            "  -- Consider some n, m, and p in Nats.\n",
+            "  intros n m p\n",
+            "  -- Perform induction on n.\n",
+            "  induction n with\n",
+            "  | zero =>\n",
+            "    -- Base case: When n = 0, we need to show 0 + (m + p) = (0 + m) + p.\n",
+            "    -- We have the fact 0 + (m + p) = m + p by the definition of addition.\n",
+            "    have h_base: 0 + (m + p) = m + p := <TODO_PROOF_OR_HAMMER>\n",
+            "    -- We also have the fact (0 + m) + p = m + p by the definition of addition.\n",
+            "    have h_symm: (0 + m) + p = m + p := <TODO_PROOF_OR_HAMMER>\n",
+            "    -- Combine facts to close goal\n",
+            "    <TODO_PROOF_OR_HAMMER>\n",
+            "  | succ n ih =>\n",
+            "    -- Inductive step: Assume n + (m + p) = (n + m) + p, we need to show succ n + (m + p) = (succ n + m) + p.\n",
+            "    -- By the inductive hypothesis, we have n + (m + p) = (n + m) + p.\n",
+            "    have h_inductive: n + (m + p) = (n + m) + p := <TODO_PROOF_OR_HAMMER>\n",
+            "    -- 1. Let's start by pulling out the succ from left side and have the entire addition inside the succ.\n",
+            "    have h_pull_succ_out_from_left: Nat.succ n + (m + p) = Nat.succ (n + (m + p)) := <TODO_PROOF_OR_HAMMER>\n",
+            "    -- 2. Now that we have the IH hypothesis appearing inside the left, let's apply it so we have n + (m + p) = (n + m) + p.\n",
+            "    have h_inside_left_associates: Nat.succ (n + (m + p)) = Nat.succ ((n + m) + p) := <TODO_PROOF_OR_HAMMER>\n",
+            "    -- 3. Now that the parentheses (apps of plus) are in the right place for both sides, push the succ on the left twice so both terms are the same.\n",
+            "    have h_push_succ_in_left_twice: Nat.succ ((n + m) + p) = ((Nat.succ n) + m) + p := <TODO_PROOF_OR_HAMMER>\n",
+            "    -- Combine facts to close goal\n",
+            "    <TODO_PROOF_OR_HAMMER>\n"
+        ],
+        "src_header_fl_problem": ["import Mathlib.Data.Nat.Basic"],
+        "fl_header_sketch": [
+            "import Mathlib.Data.Nat.Basic",
+            "import Aesop"
+        ],
+        "path_2_file": "~/gold-ai-olympiad/lean_src_proj/lean_basics/basic_nats_using_mathlib_nats2_simp_no_rw.lean",
+        "fl_statement_idx": "4"
+    }
+]
