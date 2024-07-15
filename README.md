@@ -3,6 +3,7 @@
 Python interface to the Pantograph library
 
 # Getting started
+Note: For [self-contained `install.sh` script for lean](https://github.com/brando90/learning_lean/blob/main/install.sh).
 
 ## Install 1: With Conda and Pip in the SNAP cluster
 
