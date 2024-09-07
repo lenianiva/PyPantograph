@@ -7,12 +7,15 @@ license = "GPL-3"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 pexpect = "^4.9.0"
 
 [tool.poetry.build]
 generate-setup-file = false
 script = "build.py"
+
+[tool.poetry.group.dev.dependencies]
+notebook = "^7.2.1"
 
 [build-system]
 requires = ["poetry-core"]

@@ -5,6 +5,7 @@ interface.
 import json, pexpect, pathlib, unittest, os
 from pantograph.expr import parse_expr, Expr, Variable, Goal, GoalState, \
     Tactic, TacticHave, TacticCalc
+from pantograph.compiler import TacticInvocation
 
 def _get_proc_cwd():
     return pathlib.Path(__file__).parent
@@ -144,6 +145,24 @@ class Server:
         if "parseError" in result:
             raise ServerError(result["parseError"])
         return GoalState.parse(result, self.to_remove_goal_states)
+
+    def compile_unit(self, module: str) -> tuple[list[str], list[TacticInvocation]]:
+        file_path = self.project_path / (module.replace('.', '/') + '.lean')
+        result = self.run('compile.unit', {
+            'module': module,
+            'compilationUnits': True,
+            'invocations': True
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+
+        with open(file_path, 'rb') as f:
+            content = f.read()
+            units = [content[begin:end].decode('utf-8') for begin,end in result['units']]
+
+        invocations = [TacticInvocation.parse(i) for i in result['invocations']]
+        return units, invocations
+
 
 
 def get_version():
