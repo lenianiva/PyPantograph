@@ -9,7 +9,7 @@ from pantograph.expr import parse_expr, Expr, Variable, Goal, GoalState, \
 def _get_proc_cwd():
     return pathlib.Path(__file__).parent
 def _get_proc_path():
-    return _get_proc_cwd() / "pantograph"
+    return _get_proc_cwd() / "pantograph-repl"
 
 class ServerError(Exception):
     pass
@@ -20,7 +20,10 @@ class Server:
                  imports=["Init"],
                  project_path=None,
                  lean_path=None,
-                 options=[],
+                 # Options for executing the REPL.
+                 # Set `{ "automaticMode" : True }` to get a gym-like experience
+                 options={},
+                 core_options=[],
                  timeout=20,
                  maxread=1000000):
         """
@@ -35,7 +38,8 @@ class Server:
         self.proc_path = _get_proc_path()
 
         self.options = options
-        self.args = " ".join(imports + [f'--{opt}' for opt in options])
+        self.core_options = core_options
+        self.args = " ".join(imports + [f'--{opt}' for opt in core_options])
         self.proc = None
         self.restart()
 
@@ -53,10 +57,16 @@ class Server:
             f"{self.proc_path} {self.args}",
             encoding="utf-8",
             maxread=self.maxread,
+            timeout=self.timeout,
             cwd=self.project_path,
             env=env,
         )
-        self.proc.setecho(False)
+        self.proc.setecho(False) # Do not send any command before this.
+        ready = self.proc.readline() # Reads the "ready."
+        assert ready == "ready.\r\n"
+
+        if self.options:
+            self.run("options.set", self.options)
 
     def run(self, cmd, payload):
         """
@@ -65,9 +75,8 @@ class Server:
         s = json.dumps(payload)
         self.proc.sendline(f"{cmd} {s}")
         try:
-            self.proc.expect("{.*}\r\n", timeout=self.timeout)
-            output = self.proc.match.group()
-            return json.loads(output)
+            line = self.proc.readline()
+            return json.loads(line)
         except pexpect.exceptions.TIMEOUT as exc:
             raise exc
 
@@ -148,7 +157,7 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.15")
+        self.assertEqual(get_version(), "0.2.17")
 
     def test_expr_type(self):
         server = Server()
@@ -179,6 +188,58 @@ class TestServer(unittest.TestCase):
         self.assertEqual(len(server.to_remove_goal_states), 1)
         server.gc()
         self.assertEqual(len(server.to_remove_goal_states), 0)
+
+    def test_automatic_mode(self):
+        server = Server(options={"automaticMode": True})
+        state0 = server.goal_start("forall (p q: Prop), Or p q -> Or q p")
+        self.assertEqual(len(server.to_remove_goal_states), 0)
+        self.assertEqual(state0.state_id, 0)
+        state1 = server.goal_tactic(state0, goal_id=0, tactic="intro a b h")
+        self.assertEqual(state1.state_id, 1)
+        self.assertEqual(state1.goals, [Goal(
+            variables=[
+                Variable(name="a", t="Prop"),
+                Variable(name="b", t="Prop"),
+                Variable(name="h", t="a ∨ b"),
+            ],
+            target="b ∨ a",
+            name=None,
+        )])
+        state2 = server.goal_tactic(state1, goal_id=0, tactic="cases h")
+        self.assertEqual(state2.goals, [
+            Goal(
+                variables=[
+                    Variable(name="a", t="Prop"),
+                    Variable(name="b", t="Prop"),
+                    Variable(name="h✝", t="a"),
+                ],
+                target="b ∨ a",
+                name="inl",
+            ),
+            Goal(
+                variables=[
+                    Variable(name="a", t="Prop"),
+                    Variable(name="b", t="Prop"),
+                    Variable(name="h✝", t="b"),
+                ],
+                target="b ∨ a",
+                name="inr",
+            ),
+        ])
+        state3 = server.goal_tactic(state2, goal_id=1, tactic="apply Or.inl")
+        state4 = server.goal_tactic(state3, goal_id=0, tactic="assumption")
+        self.assertEqual(state4.goals, [
+            Goal(
+                variables=[
+                    Variable(name="a", t="Prop"),
+                    Variable(name="b", t="Prop"),
+                    Variable(name="h✝", t="a"),
+                ],
+                target="b ∨ a",
+                name="inl",
+            )
+        ])
+
 
     def test_conv_calc(self):
         server = Server()
