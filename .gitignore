@@ -8,6 +8,3 @@
 # Output
 /dist
 /venv
-
-pantograph/pantograph
-pantograph/lean-toolchain
