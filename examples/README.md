@@ -19,5 +19,8 @@ poetry run examples/aesop.py
 poetry run examples/data.py
 ```
 
-Warning: If you make modifications to any Lean files, you must re-run `lake build`!
+Warning: If you make modifications to any Lean files, you must re-run `lake
+build`! Moreover, the version of the Lean used in the example folder (including
+dependencies in `lakefile.lean` and `lean-toolchain`) **must match exactly**
+with the version in `src/`!
 

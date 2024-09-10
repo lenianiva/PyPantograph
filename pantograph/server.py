@@ -2,13 +2,15 @@
 Class which manages a Pantograph instance. All calls to the kernel uses this
 interface.
 """
-import json, pexpect, pathlib, unittest, os
+import json, pexpect, unittest, os
+from typing import Union
+from pathlib import Path
 from pantograph.expr import parse_expr, Expr, Variable, Goal, GoalState, \
     Tactic, TacticHave, TacticCalc
 from pantograph.compiler import TacticInvocation
 
 def _get_proc_cwd():
-    return pathlib.Path(__file__).parent
+    return Path(__file__).parent
 def _get_proc_path():
     return _get_proc_cwd() / "pantograph-repl"
 
@@ -64,7 +66,7 @@ class Server:
         )
         self.proc.setecho(False) # Do not send any command before this.
         ready = self.proc.readline() # Reads the "ready."
-        assert ready == "ready.\r\n"
+        assert ready == "ready.\r\n", f"Server failed to emit ready signal: {ready}; Maybe the project needs to be rebuilt"
 
         if self.options:
             self.run("options.set", self.options)
@@ -146,17 +148,19 @@ class Server:
             raise ServerError(result["parseError"])
         return GoalState.parse(result, self.to_remove_goal_states)
 
-    def compile_unit(self, module: str) -> tuple[list[str], list[TacticInvocation]]:
-        file_path = self.project_path / (module.replace('.', '/') + '.lean')
-        result = self.run('compile.unit', {
-            'module': module,
-            'compilationUnits': True,
-            'invocations': True
+    def tactic_invocations(self, file_name: Union[str, Path]) -> tuple[list[str], list[TacticInvocation]]:
+        """
+        Collect tactic invocation points in file, and return them.
+        """
+        result = self.run('frontend.process', {
+            'fileName': str(file_name),
+            'invocations': True,
+            "sorrys": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
 
-        with open(file_path, 'rb') as f:
+        with open(file_name, 'rb') as f:
             content = f.read()
             units = [content[begin:end].decode('utf-8') for begin,end in result['units']]
 
