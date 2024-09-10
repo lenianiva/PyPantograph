@@ -22,7 +22,7 @@ class Server:
                  project_path=None,
                  lean_path=None,
                  # Options for executing the REPL.
-                 # Set `{ "automaticMode" : True }` to get a gym-like experience
+                 # Set `{ "automaticMode" : False }` to handle resumption by yourself.
                  options={},
                  core_options=[],
                  timeout=20,
@@ -176,7 +176,7 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.17")
+        self.assertEqual(get_version(), "0.2.19")
 
     def test_expr_type(self):
         server = Server()
@@ -209,7 +209,7 @@ class TestServer(unittest.TestCase):
         self.assertEqual(len(server.to_remove_goal_states), 0)
 
     def test_automatic_mode(self):
-        server = Server(options={"automaticMode": True})
+        server = Server()
         state0 = server.goal_start("forall (p q: Prop), Or p q -> Or q p")
         self.assertEqual(len(server.to_remove_goal_states), 0)
         self.assertEqual(state0.state_id, 0)
@@ -261,7 +261,7 @@ class TestServer(unittest.TestCase):
 
 
     def test_conv_calc(self):
-        server = Server()
+        server = Server(options={"automaticMode": False})
         state0 = server.goal_start("∀ (a b: Nat), (b = 2) -> 1 + a + 1 = a + b")
 
         variables = [
