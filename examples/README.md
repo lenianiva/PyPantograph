@@ -1,6 +1,8 @@
 # Examples
 
-For a quick introduction of the API, fire up Jupyter and open `all.ipynb`.
+For a quick introduction of the API, fire up Jupyter and open `all.ipynb`. (Did
+you remember to `poetry install`?)
+
 ``` sh
 poetry run jupyter notebook
 ```

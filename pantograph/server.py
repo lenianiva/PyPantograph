@@ -167,6 +167,20 @@ class Server:
         invocations = [TacticInvocation.parse(i) for i in result['invocations']]
         return units, invocations
 
+    def load_sorry(self, command: str) -> list[GoalState]:
+        result = self.run('frontend.process', {
+            'file': command,
+            'invocations': False,
+            "sorrys": True,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        states = [
+            GoalState.parse_inner(state_id, goals, self.to_remove_goal_states)
+            for (state_id, goals) in result['goalStates']
+        ]
+        return states
+
 
 
 def get_version():
@@ -296,6 +310,19 @@ class TestServer(unittest.TestCase):
         state3 = server.goal_tactic(state2, goal_id=1, tactic=TacticCalc("_ = a + 2"))
         state4 = server.goal_tactic(state3, goal_id=0, tactic="rw [Nat.add_assoc]")
         self.assertTrue(state4.is_solved)
+
+    def test_load_sorry(self):
+        server = Server()
+        state0, = server.load_sorry("example (p: Prop): p → p := sorry")
+        self.assertEqual(state0.goals, [
+            Goal(
+                [Variable(name="p", t="Prop")],
+                target="p → p",
+            ),
+        ])
+        state1 = server.goal_tactic(state0, goal_id=0, tactic="intro h")
+        state2 = server.goal_tactic(state1, goal_id=0, tactic="exact h")
+        self.assertTrue(state2.is_solved)
 
 
 if __name__ == '__main__':
