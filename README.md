@@ -19,6 +19,7 @@ poetry build
 To run server tests:
 ``` bash
 python -m pantograph.server
+python -m pantograph.search
 ```
 The tests in `pantograph/server.py` also serve as simple interaction examples
 

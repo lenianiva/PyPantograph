@@ -51,6 +51,9 @@ class Server:
         # List of goal states that should be garbage collected
         self.to_remove_goal_states = []
 
+    def is_automatic(self):
+        return self.options.get("automaticMode", True)
+
     def restart(self):
         if self.proc is not None:
             self.proc.close()

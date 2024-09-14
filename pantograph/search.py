@@ -21,8 +21,9 @@ class SearchState:
 
     @property
     def next_goal_id(self) -> int:
-        goal_id, _ = max([(i, prio) for i, prio in enumerate(self.priorities) if not self.solved[i]],
-                        key=lambda x:x[1])
+        goal_id, _ = max(
+            ((i, prio) for i, prio in enumerate(self.priorities) if not self.solved[i]),
+            key=lambda x: x[1])
         return goal_id
 
     @property
@@ -40,11 +41,20 @@ class SearchResult:
     steps: int
 
 class Agent:
+    """
+    An agent interface for proof search
+    """
 
-    def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str,  informal_proof:str) -> Optional[Tactic]:
+    def next_tactic(
+            self,
+            state: GoalState,
+            goal_id: int,
+            informal_stmt: str,
+            informal_proof: str) -> Optional[Tactic]:
         """
         Implement this function to generate the next tactic for a goal
         """
+        return None
 
     def guidance(self, state: GoalState) -> list[float]:
         """
@@ -65,16 +75,22 @@ class Agent:
                max_steps: int = 100,
                max_trials_per_goal: int = 5,
                verbose: bool = False) -> SearchResult:
+        """
+        Searches using th
+        """
+        assert server.is_automatic(), "Search must be run in automatic mode"
 
-        search_stack = [SearchState(state=server.goal_start(target),
-                                    parent=None,
-                                    parent_goal_id=None,
-                                    priorities=[0.0])]
+        initial_state = SearchState(
+            state=server.goal_start(target),
+            parent=None,
+            parent_goal_id=None,
+            priorities=[0.0]
+        )
+        search_stack = [initial_state]
         """
         Executes proof search on this state
         """
         for i_step in range(max_steps):
-
             assert search_stack, "No states in search stack"
 
             if verbose:
@@ -84,17 +100,7 @@ class Agent:
             assert isinstance(search_state, SearchState)
 
             if search_state.is_solved:
-                # if the state is solved, propagate this solved status
-                if search_state.is_root:
-                    if verbose:
-                        print("Search complete: Root state solved")
-                    self.reset()
-                    return SearchResult(success=True, steps=i_step)
-
-                search_stack.pop(-1)
-                assert not search_stack[search_state.parent].solved[search_state.parent_goal_id]
-                search_stack[search_state.parent].solved[search_state.parent_goal_id] = True
-                continue
+                return SearchResult(success=True, steps=i_step)
 
             # Find the unsolved goal with the highest priority
             goal_id = search_state.next_goal_id
@@ -106,7 +112,8 @@ class Agent:
                 # Generate tactic for this goal
                 tactic = self.next_tactic(search_state.state, goal_id, informal_stmt, informal_proof)
 
-            print("????next tactic: ", tactic)
+            if verbose:
+                print(f"Next tactic: {tactic}")
             if not tactic:
                 # pop the current state and continue to the next
                 search_stack.pop(-1)
@@ -128,13 +135,17 @@ class Agent:
                     if len(next_goal_state.goals) <= 1 else \
                     self.guidance(next_goal_state)
                 parent = len(search_stack) - 1
-                search_stack.append(SearchState(state=next_goal_state,
-                                                parent=parent,
-                                                parent_goal_id=goal_id,
-                                                priorities=priorities))
+                next_state = SearchState(
+                    state=next_goal_state,
+                    parent=parent,
+                    parent_goal_id=goal_id,
+                    priorities=priorities
+                )
+                search_stack.append(next_state)
 
             except TacticFailure as t:
-                print(f"Tactic failed: {t}")
+                if verbose:
+                    print(f"Tactic failed: {t}")
                 # try the next tactic. this one failed
 
         if verbose:
@@ -163,7 +174,12 @@ class DumbAgent(Agent):
             "assumption",
         ]
 
-    def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str,  informal_proof:str) -> Optional[Tactic]:
+    def next_tactic(
+            self,
+            state: GoalState,
+            goal_id: int,
+            informal_stmt: str,
+            informal_proof: str) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 
@@ -188,14 +204,20 @@ class TestSearch(unittest.TestCase):
 
         server = Server()
         agent = DumbAgent()
-        flag = agent.search(server=server, target="∀ (p q: Prop), p -> p", verbose=True)
+        flag = agent.search(
+            server=server,
+            target="∀ (p q: Prop), p -> p",
+            verbose=False)
         #flag = agent.search(server=server, target="∀ (p q: Prop), Or p q -> Or q p", verbose=True)
         self.assertTrue(flag)
     def test_solve_big(self):
 
         server = Server()
         agent = DumbAgent()
-        flag = agent.search(server=server, target="∀ (p q: Prop), Or p q -> Or q p", verbose=True)
+        flag = agent.search(
+            server=server,
+            target="∀ (p q: Prop), Or p q -> Or q p",
+            verbose=False)
         self.assertTrue(flag)
 
 
