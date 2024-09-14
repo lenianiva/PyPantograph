@@ -18,6 +18,9 @@ tiktoken = "^0.7.0"
 generate-setup-file = false
 script = "build.py"
 
+[tool.poetry.group.dev.dependencies]
+notebook = "^7.2.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

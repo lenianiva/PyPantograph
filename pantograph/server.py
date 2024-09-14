@@ -2,14 +2,17 @@
 Class which manages a Pantograph instance. All calls to the kernel uses this
 interface.
 """
-import json, pexpect, pathlib, unittest, os
+import json, pexpect, unittest, os
+from typing import Union
+from pathlib import Path
 from pantograph.expr import parse_expr, Expr, Variable, Goal, GoalState, \
     Tactic, TacticHave, TacticCalc
+from pantograph.compiler import TacticInvocation
 
 def _get_proc_cwd():
-    return pathlib.Path(__file__).parent
+    return Path(__file__).parent
 def _get_proc_path():
-    return _get_proc_cwd() / "pantograph"
+    return _get_proc_cwd() / "pantograph-repl"
 
 class TacticFailure(Exception):
     pass
@@ -22,7 +25,10 @@ class Server:
                  imports=["Init"],
                  project_path=None,
                  lean_path=None,
-                 options=[],
+                 # Options for executing the REPL.
+                 # Set `{ "automaticMode" : False }` to handle resumption by yourself.
+                 options={},
+                 core_options=[],
                  timeout=20,
                  maxread=1000000):
         """
@@ -37,7 +43,8 @@ class Server:
         self.proc_path = _get_proc_path()
 
         self.options = options
-        self.args = " ".join(imports + [f'--{opt}' for opt in options])
+        self.core_options = core_options
+        self.args = " ".join(imports + [f'--{opt}' for opt in core_options])
         self.proc = None
         self.restart()
 
@@ -55,10 +62,16 @@ class Server:
             f"{self.proc_path} {self.args}",
             encoding="utf-8",
             maxread=self.maxread,
+            timeout=self.timeout,
             cwd=self.project_path,
             env=env,
         )
-        self.proc.setecho(False)
+        self.proc.setecho(False) # Do not send any command before this.
+        ready = self.proc.readline() # Reads the "ready."
+        assert ready == "ready.\r\n", f"Server failed to emit ready signal: {ready}; Maybe the project needs to be rebuilt"
+
+        if self.options:
+            self.run("options.set", self.options)
 
         self.run('options.set', {'printDependentMVars': True})
 
@@ -69,9 +82,8 @@ class Server:
         s = json.dumps(payload)
         self.proc.sendline(f"{cmd} {s}")
         try:
-            self.proc.expect("{.*}\r\n", timeout=self.timeout)
-            output = self.proc.match.group()
-            return json.loads(output)
+            line = self.proc.readline()
+            return json.loads(line)
         except pexpect.exceptions.TIMEOUT as exc:
             raise exc
 
@@ -141,12 +153,38 @@ class Server:
             raise ServerError(result["parseError"])
         return GoalState.parse(result, self.to_remove_goal_states)
 
-
-    def compile_tactics(self, module: str) -> list[tuple[str, str, str]]:
-        result = self.run('compile.tactics', {'module': module})
+    def tactic_invocations(self, file_name: Union[str, Path]) -> tuple[list[str], list[TacticInvocation]]:
+        """
+        Collect tactic invocation points in file, and return them.
+        """
+        result = self.run('frontend.process', {
+            'fileName': str(file_name),
+            'invocations': True,
+            "sorrys": False,
+        })
         if "error" in result:
             raise ServerError(result["desc"])
-        return [(i['goalBefore'], i['tactic'], i['goalAfter']) for i in result['invocations']]
+
+        with open(file_name, 'rb') as f:
+            content = f.read()
+            units = [content[begin:end].decode('utf-8') for begin,end in result['units']]
+
+        invocations = [TacticInvocation.parse(i) for i in result['invocations']]
+        return units, invocations
+
+    def load_sorry(self, command: str) -> list[GoalState]:
+        result = self.run('frontend.process', {
+            'file': command,
+            'invocations': False,
+            "sorrys": True,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        states = [
+            GoalState.parse_inner(state_id, goals, self.to_remove_goal_states)
+            for (state_id, goals) in result['goalStates']
+        ]
+        return states
 
 
 
@@ -161,7 +199,7 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.15")
+        self.assertEqual(get_version(), "0.2.19")
 
     def test_expr_type(self):
         server = Server()
@@ -193,8 +231,60 @@ class TestServer(unittest.TestCase):
         server.gc()
         self.assertEqual(len(server.to_remove_goal_states), 0)
 
-    def test_conv_calc(self):
+    def test_automatic_mode(self):
         server = Server()
+        state0 = server.goal_start("forall (p q: Prop), Or p q -> Or q p")
+        self.assertEqual(len(server.to_remove_goal_states), 0)
+        self.assertEqual(state0.state_id, 0)
+        state1 = server.goal_tactic(state0, goal_id=0, tactic="intro a b h")
+        self.assertEqual(state1.state_id, 1)
+        self.assertEqual(state1.goals, [Goal(
+            variables=[
+                Variable(name="a", t="Prop"),
+                Variable(name="b", t="Prop"),
+                Variable(name="h", t="a ∨ b"),
+            ],
+            target="b ∨ a",
+            name=None,
+        )])
+        state2 = server.goal_tactic(state1, goal_id=0, tactic="cases h")
+        self.assertEqual(state2.goals, [
+            Goal(
+                variables=[
+                    Variable(name="a", t="Prop"),
+                    Variable(name="b", t="Prop"),
+                    Variable(name="h✝", t="a"),
+                ],
+                target="b ∨ a",
+                name="inl",
+            ),
+            Goal(
+                variables=[
+                    Variable(name="a", t="Prop"),
+                    Variable(name="b", t="Prop"),
+                    Variable(name="h✝", t="b"),
+                ],
+                target="b ∨ a",
+                name="inr",
+            ),
+        ])
+        state3 = server.goal_tactic(state2, goal_id=1, tactic="apply Or.inl")
+        state4 = server.goal_tactic(state3, goal_id=0, tactic="assumption")
+        self.assertEqual(state4.goals, [
+            Goal(
+                variables=[
+                    Variable(name="a", t="Prop"),
+                    Variable(name="b", t="Prop"),
+                    Variable(name="h✝", t="a"),
+                ],
+                target="b ∨ a",
+                name="inl",
+            )
+        ])
+
+
+    def test_conv_calc(self):
+        server = Server(options={"automaticMode": False})
         state0 = server.goal_start("∀ (a b: Nat), (b = 2) -> 1 + a + 1 = a + b")
 
         variables = [
@@ -225,6 +315,19 @@ class TestServer(unittest.TestCase):
         state3 = server.goal_tactic(state2, goal_id=1, tactic=TacticCalc("_ = a + 2"))
         state4 = server.goal_tactic(state3, goal_id=0, tactic="rw [Nat.add_assoc]")
         self.assertTrue(state4.is_solved)
+
+    def test_load_sorry(self):
+        server = Server()
+        state0, = server.load_sorry("example (p: Prop): p → p := sorry")
+        self.assertEqual(state0.goals, [
+            Goal(
+                [Variable(name="p", t="Prop")],
+                target="p → p",
+            ),
+        ])
+        state1 = server.goal_tactic(state0, goal_id=0, tactic="intro h")
+        state2 = server.goal_tactic(state1, goal_id=0, tactic="exact h")
+        self.assertTrue(state2.is_solved)
 
 
 if __name__ == '__main__':

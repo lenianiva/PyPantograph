@@ -78,11 +78,13 @@ class GoalState:
         return not self.goals
 
     @staticmethod
-    def parse(payload: dict, _sentinel: list[int]):
-        state_id = payload["nextStateId"]
-        goal_names = { g["name"]: i for i,g in enumerate(payload["goals"]) }
-        goals = [Goal.parse(g, goal_names) for g in payload["goals"]]
+    def parse_inner(state_id: int, goals: list, _sentinel: list[int]):
+        goal_names = { g["name"]: i for i, g in enumerate(goals) }
+        goals = [Goal.parse(g, goal_names) for g in goals]
         return GoalState(state_id, goals, _sentinel)
+    @staticmethod
+    def parse(payload: dict, _sentinel: list[int]):
+        return GoalState.parse_inner(payload["nextStateId"], payload["goals"], _sentinel)
 
     def __str__(self):
         return "\n".join([str(g) for g in self.goals])
