@@ -25,7 +25,23 @@ The tests in `pantograph/server.py` also serve as simple interaction examples
 
 ## Examples
 
-See `examples/README.md`
+For API interaction examples, see `examples/README.md`
+
+An agent based on the `sglang` library is provided in
+`pantograph/search_llm.py`. To use this agent, set the environment variable
+`OPENAI_API_KEY`, and run
+```bash
+python3 -m pantograph.search_llm
+```
+
+## Experiments
+
+In `experiments/`, there is an experiment on running a LLM prover on miniF2F
+data. Run with
+
+```sh
+python3 experiments/miniF2F_search.py [--dry-run]
+```
 
 ## Referencing
 

@@ -69,7 +69,7 @@ class Agent:
 
     def search(self,
                server: Server,
-               target: Expr,
+               goal_state: GoalState,
                informal_stmt: str = "",
                informal_proof: str = "",
                max_steps: int = 100,
@@ -79,9 +79,10 @@ class Agent:
         Searches using th
         """
         assert server.is_automatic(), "Search must be run in automatic mode"
+        assert len(goal_state.goals) == 1, "Initial state must have exactly one goal"
 
         initial_state = SearchState(
-            state=server.goal_start(target),
+            state=goal_state,
             parent=None,
             parent_goal_id=None,
             priorities=[0.0]
@@ -204,9 +205,10 @@ class TestSearch(unittest.TestCase):
 
         server = Server()
         agent = DumbAgent()
+        goal_state = server.goal_start("∀ (p q: Prop), p -> p")
         flag = agent.search(
             server=server,
-            target="∀ (p q: Prop), p -> p",
+            goal_state=goal_state,
             verbose=False)
         #flag = agent.search(server=server, target="∀ (p q: Prop), Or p q -> Or q p", verbose=True)
         self.assertTrue(flag)
@@ -214,9 +216,10 @@ class TestSearch(unittest.TestCase):
 
         server = Server()
         agent = DumbAgent()
+        goal_state = server.goal_start("∀ (p q: Prop), Or p q -> Or q p")
         flag = agent.search(
             server=server,
-            target="∀ (p q: Prop), Or p q -> Or q p",
+            goal_state=goal_state,
             verbose=False)
         self.assertTrue(flag)
 
