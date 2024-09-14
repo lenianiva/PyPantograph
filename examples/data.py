@@ -14,7 +14,7 @@ if __name__ == '__main__':
     print(f"$PWD: {project_path}")
     print(f"$LEAN_PATH: {lean_path}")
     server = Server(imports=['Example'], project_path=project_path, lean_path=lean_path)
-    units, invocations = server.compile_unit("Example")
+    units, invocations = server.tactic_invocations(project_path / "Example.lean")
     for i, u in enumerate(units):
         print(f"==== #{i} ====")
         print(u)

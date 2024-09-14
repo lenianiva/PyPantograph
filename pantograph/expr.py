@@ -73,10 +73,12 @@ class GoalState:
         return not self.goals
 
     @staticmethod
-    def parse(payload: dict, _sentinel: list[int]):
-        state_id = payload["nextStateId"]
-        goals = [Goal.parse(g) for g in payload["goals"]]
+    def parse_inner(state_id: int, goals: list, _sentinel: list[int]):
+        goals = [Goal.parse(g) for g in goals]
         return GoalState(state_id, goals, _sentinel)
+    @staticmethod
+    def parse(payload: dict, _sentinel: list[int]):
+        return GoalState.parse_inner(payload["nextStateId"], payload["goals"], _sentinel)
 
 @dataclass(frozen=True)
 class TacticHave:
