@@ -14,6 +14,8 @@ def _get_proc_cwd():
 def _get_proc_path():
     return _get_proc_cwd() / "pantograph-repl"
 
+class TacticFailure(Exception):
+    pass
 class ServerError(Exception):
     pass
 
@@ -49,6 +51,9 @@ class Server:
         # List of goal states that should be garbage collected
         self.to_remove_goal_states = []
 
+    def is_automatic(self):
+        return self.options.get("automaticMode", True)
+
     def restart(self):
         if self.proc is not None:
             self.proc.close()
@@ -70,6 +75,8 @@ class Server:
 
         if self.options:
             self.run("options.set", self.options)
+
+        self.run('options.set', {'printDependentMVars': True})
 
     def run(self, cmd, payload):
         """
@@ -93,7 +100,7 @@ class Server:
             self.run('goal.delete', {'stateIds': self.to_remove_goal_states})
             self.to_remove_goal_states.clear()
 
-    def expr_type(self, expr: str) -> Expr:
+    def expr_type(self, expr: Expr) -> Expr:
         """
         Evaluate the type of a given expression. This gives an error if the
         input `expr` is ill-formed.
@@ -103,9 +110,10 @@ class Server:
             raise ServerError(result["desc"])
         return parse_expr(result["type"])
 
-    def goal_start(self, expr: str) -> GoalState:
+    def goal_start(self, expr: Expr) -> GoalState:
         result = self.run('goal.start', {"expr": str(expr)})
         if "error" in result:
+            print(f"Cannot start goal: {expr}")
             raise ServerError(result["desc"])
         return GoalState(state_id=result["stateId"], goals=[Goal.sentence(expr)], _sentinel=self.to_remove_goal_states)
 
@@ -123,9 +131,9 @@ class Server:
         if "error" in result:
             raise ServerError(result["desc"])
         if "tacticErrors" in result:
-            raise ServerError(result["tacticErrors"])
+            raise TacticFailure(result["tacticErrors"])
         if "parseError" in result:
-            raise ServerError(result["parseError"])
+            raise TacticFailure(result["parseError"])
         return GoalState.parse(result, self.to_remove_goal_states)
 
     def goal_conv_begin(self, state: GoalState, goal_id: int) -> GoalState:
