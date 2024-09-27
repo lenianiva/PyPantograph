@@ -208,15 +208,12 @@ def main(
     top_p: float = 0.95, 
     temperature: float = 0.8,
     mode: str = "dryrun",
-    # mode: str = "online",
 ):
     path_2_eval_dataset = Path(path_2_eval_dataset).expanduser()
     print(f'{path_2_eval_dataset=}')
 
     # - Start wandb run
     print(f'\n\n-- Setup params')
-    # num_workers = min(144, cpu_count())
-    # print(f'{num_workers=} {cpu_count()=}')
     CUDA_VISIBLE_DEVICES = os.environ.get("CUDA_VISIBLE_DEVICES")
     current_tmux_session = os.environ.get("TMUX", "").split(",")[-1]
     today = datetime.datetime.now().strftime("%Y-m%m-d%d-t%Hh_%Mm_%Ss")

@@ -14,6 +14,10 @@ if __name__ == '__main__':
     print(f"$PWD: {project_path}")
     print(f"$LEAN_PATH: {lean_path}")
     server = Server(imports=['Example'], project_path=project_path, lean_path=lean_path)
-    data = server.compile_tactics("Example")
-    for (before, tactic, after) in data:
-        print(f"{before}\n{tactic}\n{after}\n\n")
+    units, invocations = server.tactic_invocations(project_path / "Example.lean")
+    for i, u in enumerate(units):
+        print(f"==== #{i} ====")
+        print(u)
+    print("==== Invocations ====")
+    for i in invocations:
+        print(f"{i.before}\n{i.tactic}\n{i.after}\n")
