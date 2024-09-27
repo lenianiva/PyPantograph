@@ -1,0 +1,10 @@
+{
+    "problem": "For any natural number n, n + 0 = n.",
+    "level": "SF foundations level 1",
+    "type": "Algebra",
+    "solution": [
+        "Consider some natural number n. The proof will be by induction. Consider the base case n=0. We have 0 + 0 = 0 which holds by the definition of addion.",
+        "Now the inductive case we want to show n'+1 + 0 = n'+1. Assume it holds for n i.e., n' + 0 = n. So now by the we know the LHS is equal to (n'+0) + 1.", 
+        "Then by the induction hypothesis we know the LHS simplifies to n'+1 completing the proof. Qed."
+    ] 
+}

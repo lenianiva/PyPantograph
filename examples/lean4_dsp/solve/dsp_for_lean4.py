@@ -1,19 +1,17 @@
-import sys
-from collections import namedtuple
+"""
+DSP (Draft Sketch Prove) for Lean 4
+"""
 import fire
 from pathlib import Path
 from tqdm import tqdm
 from typing import Union, Any
 import json
 import os
-from openai import OpenAI
 import wandb
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from solve.dsp_lean_prompts import SYSTEM_PROMPT_DRAFT_V0, prompt_draft_template_lean4_v0, STOP_TOKENS_DRAFT_V0
 from solve.dsp_lean_prompts import SYSTEM_PROMPT_SKETCH_V0, prompt_sketch_template_lean4_v0, STOP_TOKENS_SKETCH_V0
-
-# prompt_draft_template_lean4_v0 = "Draft an informal solution similar to the one below. The informal solution will be used to sketch a formal proof in the Lean 4 Proof Assistant. Here are some examples of informal problem solutions pairs:\n\nInformal:\n(*### Problem\n\nProve that for any natural number n, n + 0 = n.\n\n### Solution\n\nConsider any natural number n. From properties of addition, adding zero does not change its values. Thus, n + 0 = n.*)\n\nInformal:\n(*### Problem\n\nProve that for any natural number n, n + (m + 1) = (n + m) + 1.\n\n### Solution\n\nConsider any natural numbers n and m. From properties of addition, adding 1 to the sum of n and m is the same as first adding m to n and then adding 1. Thus, n + (m + 1) = (n + m) + 1.*)\n\nInformal:\n(*### Problem\n\nProve that for any natural number n and m, n + m = m + n.\n\n### Solution\n\nConsider any natural numbers n and m. We will do induction on n. Base case: 0 + m = m + 0 by properties of addition. Inductive step, we have n + m = m + n. Then (n + 1) + m = (n + m) + 1 = (m + n) + 1 = m + (n + 1). Thus, by induction, n + m = m + n, qed.*)\n\nInformal: \n(*### Problem\n\n{nl_problem}\n\n### Solution\n"
 
 class Engine:
     def __init__(self):
@@ -31,12 +29,12 @@ class OpenAI_DSP_Engine(Engine):
                 # Draft Params
                 draft_system_prompt: str = SYSTEM_PROMPT_DRAFT_V0,  # 'You are an expert mathematician and an expert in the Lean 4 Proof Assistant.' (goal do draft)
                 draft_prompt_template: str = prompt_draft_template_lean4_v0,
-                draft_sampling_params = None,
+                draft_sampling_params: SamplingParams = SamplingParams(n=1, max_tokens=2048, top_p=0.95, temperature=0.8),
                 draft_stop_tokens: list[str] = STOP_TOKENS_DRAFT_V0,
                 # Sketch Params
                 sketch_system_prompt: str = SYSTEM_PROMPT_SKETCH_V0,
                 sketch_prompt_template: str = prompt_sketch_template_lean4_v0,
-                sketch_sampling_params = None,
+                sketch_sampling_params: SamplingParams = SamplingParams(n=1, max_tokens=2048, top_p=0.95, temperature=0.8, stop=STOP_TOKENS_DSP_V0),
                 sketch_stop_tokens: list[str] = STOP_TOKENS_SKETCH_V0,
                 # Prove Params
                 # ...TODO not sure if needed right now...
@@ -52,12 +50,12 @@ class OpenAI_DSP_Engine(Engine):
         self.draft_system_prompt = draft_system_prompt
         self.draft_prompt_template = draft_prompt_template
         self.draft_sampling_params = draft_sampling_params
-        # self.draft_sampling_params.stop = draft_stop_tokens
+        self.draft_sampling_params.stop = draft_stop_tokens
         # Sketch params
         self.sketch_system_prompt = sketch_system_prompt
         self.sketch_prompt_template = sketch_prompt_template
         self.sketch_sampling_params = sketch_sampling_params
-        # self.sketch_sampling_params.stop = sketch_stop_tokens
+        self.sketch_sampling_params.stop = sketch_stop_tokens
         # Prove params
         # ...TODO not sure if needed right now...
 
@@ -81,7 +79,7 @@ def draft(
         y_pred_nl ~ draft(eng, x_nl_prob, P_draft) 
     """
     # Make prompt from template
-    nl_problem: str = data_pt['nl_problem'][0]
+    nl_problem: str = data_pt['nl_problem']
     prompt = eng.draft_prompt_template.replace('{nl_problem}', nl_problem)
     # Get all **completions** to single prompt, one (in) -> many (out)
     # ref: https://platform.openai.com/docs/api-reference/chat/object
@@ -115,15 +113,15 @@ def sketch(
     """ 
     assert len(drafts) == 1, f"For now only 1 draft."
     # Make prompt from template
-    x_nl_problem: str = data_pt['nl_problem'][0]
+    x_nl_problem: str = data_pt['nl_problem']
     y_nl_solution: str = drafts[0]
     if autoformalize_prob_in_prompt:
-        # prompt = eng.sketch_prompt_template.replace('{nl_problem}', x_nl_problem).replace('{nl_solution}', y_nl_solution)
-        not NotImplemented
+        prompt = eng.sketch_prompt_template.replace('{nl_problem}', x_nl_problem).replace('{nl_solution}', y_nl_solution)
     else:
-        x_fl_problem = data_pt['fl_problem'][0] if 'fl_problem' in data_pt else autoformalize_prob(eng, data_pt)
-        prompt = eng.sketch_prompt_template.replace('{fl_problem}', x_nl_problem).replace('{fl_problem}', y_nl_solution)
-    # Get all **completions** to single prompt, one (in) -> many (out), ref: https://platform.openai.com/docs/api-reference/chat/object
+        x_fl_problem = data_pt['fl_problem'] if 'fl_problem' in data_pt else autoformalize_prob(eng, data_pt)
+        prompt = eng.sketch_prompt_template.replace('{nl_problem}', x_nl_problem).replace('{nl_solution}', y_nl_solution)
+    # Get all **completions** to single prompt, one (in) -> many (out)
+    # ref: https://platform.openai.com/docs/api-reference/chat/object
     response: Any = eng.llm.chat.completions.create(
         model=eng.model,
         messages=[
@@ -133,7 +131,7 @@ def sketch(
         temperature=eng.sketch_sampling_params.temperature,
         top_p=eng.sketch_sampling_params.top_p,
         n=eng.sketch_sampling_params.n,
-        # stop=eng.sketch_sampling_params.stop[:3],
+        stop=eng.sketch_sampling_params.stop[:3],
         )
     # Get all completions for single prompt
     completions: list[str] = [completion.message.content for completion in response.choices]  # response.choices[i].message
@@ -146,14 +144,12 @@ def prove(
     fl_prob: str, 
     fl_sketch: list[str],
 ):
-    """
-    
-    Complete formal sketch and check if it proves the theorem. 
-
-    fl_prob --> Lean4 theorem (problem) 
-    fl_sketch --> Lean4 Form Sketch --> have x have ha
-    
-    """
+    """ Complete formal sketch and check if it proves the theorem. """
+    from pantograph.server import Server
+    server = Server()
+    state0 = server.goal_start(fl_prob)
+    print(f'{state0=}')
+    print()
     # -- Prove
     correct: bool = False
     # -- Return
@@ -162,8 +158,8 @@ def prove(
 # -- DSP for Lean
 
 def single_proof_search_dsp_lean(
-        eng: Engine, 
-        data_pt: dict,
+    eng: Engine, 
+    data_pt: dict,
     ) -> bool:
     # -- Draft: [y_nl_pred_draft]_n ~ draft(eng, x_nl_prob, P_draft)
     y_nl_pred_drafts = draft(eng, data_pt)
@@ -188,62 +184,69 @@ def full_proof_search_dsp_lean(
     print(f'{len(eval_dataset)=}')
     # -- Proof search by DSP over all eval data
     data_pt: dict
-    for data_pt in tqdm(eval_dataset, total=len(eval_dataset), desc='DSP proof loop per data point in benchmark.'):
-        print(f'{data_pt=}')
+    for data_pt in tqdm(eval_dataset, total=len(eval_dataset)):
+        # -- DSP
         single_proof_search_dsp_lean(eng, data_pt)
+    # -- Return
     return
 
 # -- Main
 
 def main(
-    path_2_eval_dataset: str = '~/PyPantograph/examples/lean4_dsp/debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json',
+    path_2_eval_dataset: str = '~/gold-ai-olympiad/data/debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json',
+    # model: str = 'mistralai/Mistral-7B-Instruct-v0.1',
     # model: str = 'deepseek-ai/deepseek-math-7b-instruct',
     # model: str = 'gpt2',
-    # model: str = 'gpt-3.5-turbo',
-    model: str = 'gpt-4o',
+    model: str = 'gpt-3.5-turbo',
+    # model: str = 'gpt-4-turbo',
     start: int = 0, 
     end: int = sys.maxsize, 
     # end: int = 10,  # do 10 so enough boxed qs are there 
     batch_size: int = 10,  # putnam has 348 
-    n: int = 1, # num seqs to return for given prompt
+    n: int = 4, # num seqs to return for given prompt
     max_tokens: int = 2048,
     top_p: float = 0.95, 
     temperature: float = 0.8,
     mode: str = "dryrun",
+    # mode: str = "online",
 ):
     path_2_eval_dataset = Path(path_2_eval_dataset).expanduser()
     print(f'{path_2_eval_dataset=}')
 
     # - Start wandb run
-    # print(f'\n\n-- Setup params')
-    # CUDA_VISIBLE_DEVICES = os.environ.get("CUDA_VISIBLE_DEVICES")
-    # current_tmux_session = os.environ.get("TMUX", "").split(",")[-1]
-    # today = datetime.datetime.now().strftime("%Y-m%m-d%d-t%Hh_%Mm_%Ss")
-    # config = {'today': today, "CUDA_VISIBLE_DEVICES": CUDA_VISIBLE_DEVICES, "current_tmux_session": current_tmux_session, "model": model, "path_2_eval_dataset": path_2_eval_dataset}
-    # project: str = 'pypantograph'
-    # run_name = f"{project}: ({config})"
-    # run = wandb.init(mode=mode, project=project, name=run_name, save_code=True, config=config)
-    # print(f"{run.url=}")
-    # print(f'\n Config: \n{config=}')
+    print(f'\n\n-- Setup params')
+    # num_workers = min(144, cpu_count())
+    # print(f'{num_workers=} {cpu_count()=}')
+    CUDA_VISIBLE_DEVICES = os.environ.get("CUDA_VISIBLE_DEVICES")
+    current_tmux_session = os.environ.get("TMUX", "").split(",")[-1]
+    today = datetime.datetime.now().strftime("%Y-m%m-d%d-t%Hh_%Mm_%Ss")
+    config = {'today': today, "CUDA_VISIBLE_DEVICES": CUDA_VISIBLE_DEVICES, "current_tmux_session": current_tmux_session, "model": model, "path_2_eval_dataset": path_2_eval_dataset}
+    project: str = 'pypantograph'
+    run_name = f"{project}: ({config})"
+    run = wandb.init(mode=mode, project=project, name=run_name, save_code=True, config=config)
+    print(f"{run.url=}")
+    print(f'\n Config: \n{config=}')
 
     # - Run DSP for Lean
+    print(f'\n\n-- Run DSP for Lean')
+    # stop: list[str] = STOP_TOKENS
+    dtype: str = get_dtype_for_vllm()
+    print(f'{dtype=}')
+    sampling_params: SamplingParams = SamplingParams(n=n, max_tokens=max_tokens, top_p=top_p, temperature=temperature, stop=stop) 
     if 'gpt-4-' in model or 'gpt-3.5-' in model or 'gpt-4o' in model:
+        #         # api_key = open(Path('~/keys/openai_api_brandos_personal_key.txt').expanduser(), 'r').read().strip()
         api_key = open(Path('~/keys/openai_api_key_brandos_koyejolab.txt').expanduser(), 'r').read().strip()
-        SamplingParams = namedtuple('SamplingParams', ['n', 'max_tokens', 'top_p', 'temperature', 'stop'])
-        draft_sampling_params = SamplingParams(n=n, max_tokens=max_tokens, top_p=top_p, temperature=temperature, stop=STOP_TOKENS_DRAFT_V0)
-        sketch_sampling_params = SamplingParams(n=n, max_tokens=max_tokens, top_p=top_p, temperature=temperature, stop=STOP_TOKENS_SKETCH_V0)
-        eng: OpenAI_DSP_Engine = OpenAI_DSP_Engine(model=model, api_key=api_key, verbose_init=True, draft_sampling_params=draft_sampling_params, sketch_sampling_params=sketch_sampling_params)
+        eng: OpenAI_DSP_Engine = OpenAI_DSP_Engine(model=model, api_key=api_key, verbose_init=True)
     else:
         raise ValueError(f"Model {model=} not supported.")
 
     # - Full proof search with DSP
-    print(f'\n\n-- Full proof search with DSP')
     full_proof_search_dsp_lean(eng, path_2_eval_dataset)
 
     # - End run
-    # wandb.config.update(config)
-    # print(f"{wandb.config=}")
-    # run.finish()
+    wandb.config.update(config)
+    print(f"{wandb.config=}")
+    run.finish()
 
 if __name__ == "__main__":
     import time
