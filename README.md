@@ -29,12 +29,9 @@ python3 -m pantograph.search_llm
 
 ## Experiments
 
-In `experiments/`, there is an experiment on running a LLM prover on miniF2F
-data. Run with
-
-```sh
-python3 experiments/miniF2F_search.py [--dry-run]
-```
+In `experiments/`, there are some experiments:
+1. `minif2f/` is an example of executing a SGLANG based prover on the miniF2F dataset
+2. `dsp` is an Lean implementation of Draft-Sketch-Prove
 
 ## Referencing
 
