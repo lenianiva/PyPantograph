@@ -12,10 +12,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+experiment_dir = Path(__file__).resolve().parent.parent
+
 # just an example of stop tokens from the MATH eval code
 # STOP_TOKENS: list[str] = ["Solution:", "Problem:", "Question:", "USER:", "USER:", "USER", "ASSISTANT:", "ASSISTANT", "Instruction:", "Instruction", "Response:", "Response"]
 
-default_path_2_examples = '~/gold-ai-olympiad/data/debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json'
+default_path_2_examples = 'debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json'
 
 # -- Prompt draft (P_draft) for Lean 4
 """
@@ -48,7 +50,7 @@ def get_prompt_draft_template_4_lean_v0(
     prompt_draft_template_4_lean: Optional[str] = prompt_draft_template_lean4_v0, 
     verbose: bool = False,
     ):
-    path_2_examples = Path(path_2_examples).expanduser()
+    path_2_examples = experiment_dir / Path(path_2_examples)
     # load json file with list of dicts from file in one line
     with open(path_2_examples, 'r') as f:
         examples: list[dict] = json.load(f)
@@ -108,7 +110,7 @@ def get_prompt_sketch_template_4_lean_v0(
     autoformalize_prob_in_prompt: Optional[bool] = False,
     verbose: bool = False,
     ):
-    path_2_examples = Path(path_2_examples).expanduser()
+    path_2_examples = experiment_dir / Path(path_2_examples)
     # load json file with list of dicts from file in one line
     with open(path_2_examples, 'r') as f:
         examples: list[dict] = json.load(f)

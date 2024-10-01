@@ -1,11 +1,9 @@
-import sys
+import sys, os, json
+from pathlib import Path
+from typing import Union, Any
 from collections import namedtuple
 import fire
-from pathlib import Path
 from tqdm import tqdm
-from typing import Union, Any
-import json
-import os
 from openai import OpenAI
 import wandb
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -117,6 +115,7 @@ def sketch(
     # Make prompt from template
     x_nl_problem: str = data_pt['nl_problem'][0]
     y_nl_solution: str = drafts[0]
+    x_fl_problem = None
     if autoformalize_prob_in_prompt:
         # prompt = eng.sketch_prompt_template.replace('{nl_problem}', x_nl_problem).replace('{nl_solution}', y_nl_solution)
         not NotImplemented
@@ -228,7 +227,7 @@ def main(
 
     # - Run DSP for Lean
     if 'gpt-4-' in model or 'gpt-3.5-' in model or 'gpt-4o' in model:
-        api_key = open(Path('~/keys/openai_api_key_brandos_koyejolab.txt').expanduser(), 'r').read().strip()
+        api_key = os.environ['OPENAI_API_KEY']
         SamplingParams = namedtuple('SamplingParams', ['n', 'max_tokens', 'top_p', 'temperature', 'stop'])
         draft_sampling_params = SamplingParams(n=n, max_tokens=max_tokens, top_p=top_p, temperature=temperature, stop=STOP_TOKENS_DRAFT_V0)
         sketch_sampling_params = SamplingParams(n=n, max_tokens=max_tokens, top_p=top_p, temperature=temperature, stop=STOP_TOKENS_SKETCH_V0)

@@ -1,4 +1,6 @@
-#
+# Lean Draft Sketch Prove (DSP)
+
+based on Sean Welleck's DSP for Isabelle: https://github.com/wellecks/ntptutorial/tree/main/partII_dsp
 
 ## Related work
 

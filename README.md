@@ -33,6 +33,10 @@ In `experiments/`, there are some experiments:
 1. `minif2f/` is an example of executing a SGLANG based prover on the miniF2F dataset
 2. `dsp` is an Lean implementation of Draft-Sketch-Prove
 
+If the experiments don't work, run them in `poetry shell`. The environment
+variable `OPENAI_API_KEY` must be set when running experiments calling the
+OpenAI API.
+
 ## Referencing
 
 ```bib
