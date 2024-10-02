@@ -2,6 +2,12 @@
 
 based on Sean Welleck's DSP for Isabelle: https://github.com/wellecks/ntptutorial/tree/main/partII_dsp
 
+## Execution
+
+``` sh
+python3 experiments/dsp/main.py eval
+```
+
 ## Related work
 
 ### Tony's AF

@@ -139,26 +139,3 @@ def get_prompt_sketch_template_4_lean_v0(
     print(prompt_sketch_template_4_lean) if verbose else None
     return prompt_sketch_template_4_lean
 prompt_sketch_template_lean4_v0 = get_prompt_sketch_template_4_lean_v0()
-
-# -- Main
-
-def main(
-    verbose: bool = True,
-):
-    # -- Print Prompt Draft
-    # print('-- Prompt Draft --')
-    # print(prompt_draft_template_lean4_v0)
-
-    # -- Print Prompt Sketch
-    print('-- Prompt Sketch --')
-    sketch_prompt: str = get_prompt_sketch_template_4_lean_v0(verbose=verbose)
-    # print(prompt_sketch_template_lean4_v0)
-    print(sketch_prompt)
-
-if __name__ == '__main__':
-    import time
-    start = time.time()
-    # fire.Fire()
-    main()
-    end = time.time()
-    print(f'Time elapsed: {end - start} seconds, or {(end - start) / 60} minutes, or {(end - start) / 3600} hours.')
