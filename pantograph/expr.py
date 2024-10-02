@@ -92,6 +92,7 @@ class GoalState:
 @dataclass(frozen=True)
 class TacticHave:
     branch: str
+    binder_name: Optional[str] = None
 @dataclass(frozen=True)
 class TacticCalc:
     step: str

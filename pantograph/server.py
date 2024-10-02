@@ -123,6 +123,8 @@ class Server:
             args["tactic"] = tactic
         elif isinstance(tactic, TacticHave):
             args["have"] = tactic.branch
+            if tactic.binder_name:
+                args["binderName"] = tactic.binder_name
         elif isinstance(tactic, TacticCalc):
             args["calc"] = tactic.step
         else:
@@ -285,6 +287,20 @@ class TestServer(unittest.TestCase):
             )
         ])
 
+    def test_have(self):
+        server = Server()
+        state0 = server.goal_start("1 + 1 = 2")
+        state1 = server.goal_tactic(state0, goal_id=0, tactic=TacticHave(branch="2 = 1 + 1", binder_name="h"))
+        self.assertEqual(state1.goals, [
+            Goal(
+                variables=[],
+                target="2 = 1 + 1",
+            ),
+            Goal(
+                variables=[Variable(name="h", t="2 = 1 + 1")],
+                target="1 + 1 = 2",
+            ),
+        ])
 
     def test_conv_calc(self):
         server = Server(options={"automaticMode": False})
