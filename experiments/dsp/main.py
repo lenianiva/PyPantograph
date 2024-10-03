@@ -10,6 +10,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from pantograph import Server
 
 from solve.prompts import (
+    extract_lean_code,
     SYSTEM_PROMPT_DRAFT_V0,
     SYSTEM_PROMPT_SKETCH_V0,
     prompt_draft_template_lean4_v0,
@@ -58,7 +59,7 @@ class OpenAI_DSP_Engine(Engine):
                 verbose_init: bool = True,
                 ):
         super().__init__()
-        print(f'{api_key=}, {base_url=}') if verbose_init else None
+        print(f'{base_url=}') if verbose_init else None
 
 
         if not ('gpt-4-' in model or 'gpt-3.5-' in model or 'gpt-4o' in model):
@@ -161,7 +162,8 @@ def sketch(
     return sketches, x_fl_problem
 
 def prove(
-    eng,
+    eng: Engine,
+    server: Server,
     fl_prob: str,
     fl_sketch: list[str],
 ):
@@ -173,8 +175,11 @@ def prove(
     fl_sketch --> Lean4 Form Sketch --> have x have ha
 
     """
-    print(f"fl_prob={fl_prob}")
-    print(f"fl_sketch={fl_sketch}")
+    # If this throws index out of bound errors it means the source doesn't contain walled off Lean sections.
+    lean_code, = [extract_lean_code(sketch)[0] for sketch in fl_sketch]
+    state, = server.load_sorry(lean_code)
+
+    print(state)
     raise RuntimeError("Not implemented")
     # -- Prove
     correct: bool = False
@@ -195,7 +200,7 @@ def single_proof_search_dsp_lean(
     z_fl_pred_sketches, x_fl_prob = sketch(eng, data_pt, y_nl_pred_drafts)
 
     # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
-    correct: bool = prove(eng, x_fl_prob, z_fl_pred_sketches)
+    correct: bool = prove(eng, server, x_fl_prob, z_fl_pred_sketches)
 
     # -- Return
     return correct
@@ -212,6 +217,7 @@ def full_proof_search_dsp_lean(
     for data_pt in tqdm(eval_dataset, total=len(eval_dataset), desc='DSP proof loop per data point in benchmark.'):
         print(f'{data_pt=}')
         flag = single_proof_search_dsp_lean(eng, server, data_pt)
+        server.gc()
     return
 
 experiment_dir = Path(__file__).resolve().parent

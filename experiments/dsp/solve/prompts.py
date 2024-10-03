@@ -7,8 +7,7 @@ core part of data for prompt for dsp:
 "src_header_fl_problem": ..., #src_header_x*_fl
 "fl_header_sketch": ...,  # hz_fl suggested header
 """
-import json
-import sys
+import json, sys, unittest
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +17,8 @@ experiment_dir = Path(__file__).resolve().parent.parent
 # STOP_TOKENS: list[str] = ["Solution:", "Problem:", "Question:", "USER:", "USER:", "USER", "ASSISTANT:", "ASSISTANT", "Instruction:", "Instruction", "Response:", "Response"]
 
 default_path_2_examples = 'debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json'
+
+TOKEN_PLACEHOLDER = "<TODO_PROOF_OR_HAMMER>"
 
 # -- Prompt draft (P_draft) for Lean 4
 """
@@ -98,8 +99,8 @@ Formal:\n
 SYSTEM_PROMPT_SKETCH_V0 = 'You are an expert mathematician and an expert in the Lean 4 Proof Assistant.'
 STOP_TOKENS_SKETCH_V0: list[str] = ['Informal:', '(*### Problem', '###Solution', 'Formal:']
 prompt_sketch_template_lean4_v0 = ("Translate the informal solution into a sketch in the "
-"formal Lean 4 proof. Add <TODO_PROOF_OR_HAMMER> in the formal sketch whenever possible. "
-"<TODO_PROOF_OR_HAMMER> will be used to call a automated theorem prover or tactic in Lean 4. "
+f"formal Lean 4 proof. Add {TOKEN_PLACEHOLDER} in the formal sketch whenever possible. "
+f"{TOKEN_PLACEHOLDER} will be used to call a automated theorem prover or tactic in Lean 4. "
 "Here are some examples:\n"
 )
 def get_prompt_sketch_template_4_lean_v0(
@@ -139,3 +140,54 @@ def get_prompt_sketch_template_4_lean_v0(
     print(prompt_sketch_template_4_lean) if verbose else None
     return prompt_sketch_template_4_lean
 prompt_sketch_template_lean4_v0 = get_prompt_sketch_template_4_lean_v0()
+
+WALL = "```"
+
+
+def extract_lean_code(
+        sketch: str,
+        placeholder: str = TOKEN_PLACEHOLDER,
+        strip_imports: bool = True) -> list[str]:
+    lines = sketch.split("\n")
+    # find backtick markers ```
+    lean_codes = []
+    curr = []
+    is_walled = False
+    is_walled_lean = False
+    for line in lines:
+        if not is_walled:
+            if line.rstrip() == f"{WALL}lean":
+                is_walled = True
+                is_walled_lean = True
+            elif line.startswith(WALL):
+                is_walled = True
+                is_walled_lean = False
+            continue
+
+        if line.rstrip() == WALL:
+            if is_walled_lean:
+                code = "\n".join(curr) + "\n"
+                code = code.replace("ℕ", "Nat").replace(placeholder, "sorry")
+                lean_codes.append(code)
+            is_walled = False
+            is_walled_lean = False
+            continue
+
+        if strip_imports and line.startswith("import "):
+            continue
+        curr.append(line)
+
+    return lean_codes
+
+
+class TestPrompts(unittest.TestCase):
+
+    def test_extract_lean_code(self):
+        sketch = "```lean\nimport Mathlib.Data.Nat.Basic\nimport Aesop\n\ntheorem n_plus_zero : ∀ n : ℕ, n + 0 = n := by\n   -- Consider any natural number n. We need to show that n + 0 = n.\n   -- Use the fact that adding zero to any natural number does not change its value.\n   have h_nat_add_zero: ∀ n : ℕ, n + 0 = n := <TODO_PROOF_OR_HAMMER>\n   -- Combine facts to close goal\n   <TODO_PROOF_OR_HAMMER>\n```"
+        codes = extract_lean_code(sketch)
+        self.assertEqual(codes, [
+            "import Mathlib.Data.Nat.Basic\nimport Aesop\n\ntheorem n_plus_zero : ∀ n : Nat, n + 0 = n := by\n   -- Consider any natural number n. We need to show that n + 0 = n.\n   -- Use the fact that adding zero to any natural number does not change its value.\n   have h_nat_add_zero: ∀ n : Nat, n + 0 = n := sorry\n   -- Combine facts to close goal\n   sorry\n"
+        ])
+
+if __name__ == '__main__':
+    unittest.main()
