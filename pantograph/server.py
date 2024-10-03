@@ -28,8 +28,8 @@ class Server:
                  # Options for executing the REPL.
                  # Set `{ "automaticMode" : False }` to handle resumption by yourself.
                  options={},
-                 core_options=[],
-                 timeout=20,
+                 core_options=["maxHeartbeats=0"],
+                 timeout=60,
                  maxread=1000000):
         """
         timeout: Amount of time to wait for execution
@@ -86,7 +86,10 @@ class Server:
         self.proc.sendline(f"{cmd} {s}")
         try:
             line = self.proc.readline()
-            return json.loads(line)
+            try:
+                return json.loads(line)
+            except Exception as e:
+                raise ServerError(f"Cannot decode: {line}") from e
         except pexpect.exceptions.TIMEOUT as exc:
             raise exc
 
@@ -96,9 +99,12 @@ class Server:
 
         Must be called periodically.
         """
-        if self.to_remove_goal_states:
-            self.run('goal.delete', {'stateIds': self.to_remove_goal_states})
-            self.to_remove_goal_states.clear()
+        if not self.to_remove_goal_states:
+            return
+        result = self.run('goal.delete', {'stateIds': self.to_remove_goal_states})
+        self.to_remove_goal_states.clear()
+        if "error" in result:
+            raise ServerError(result["desc"])
 
     def expr_type(self, expr: Expr) -> Expr:
         """

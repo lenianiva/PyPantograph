@@ -72,9 +72,10 @@ def run_eval(args):
         if file_name.is_file():
             print(f"Skipping {datum['id']}")
             continue
-        server = Server(imports=["MiniF2F"], project_path=project_path, lean_path=lean_path, core_options=["maxHeartbeats=0"])
+        server = Server(imports=["MiniF2F"], project_path=project_path, lean_path=lean_path)
         agent = LLMAgent(server, use_hammer=args.use_hammer, use_llm=args.use_llm)
         result = try_test_data(server, agent, datum, max_steps=args.max_steps, max_trials_per_goal=args.max_trials_per_goal)
+        #server.gc()
         if result is None:
             with open(placeholder_file_name, 'w') as f:
                 json.dump({ 'id': datum['id'] }, f)
