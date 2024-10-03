@@ -1,4 +1,4 @@
-import sys, os, json, argparse
+import sys, os, json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Union, Any
@@ -218,25 +218,10 @@ experiment_dir = Path(__file__).resolve().parent
 
 # -- Main
 
-def main(
-    path_2_eval_dataset: str = experiment_dir / 'debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json',
-    # model: str = 'deepseek-ai/deepseek-math-7b-instruct',
-    # model: str = 'gpt2',
-    # model: str = 'gpt-3.5-turbo',
-    model: str = 'gpt-4o',
-    start: int = 0,
-    end: int = sys.maxsize,
-    # end: int = 10,  # do 10 so enough boxed qs are there
-    batch_size: int = 10,  # putnam has 348
-    n_samples: int = 1, # num seqs to return for given prompt
-    max_tokens: int = 2048,
-    top_p: float = 0.95,
-    temperature: float = 0.8,
-    **kwargs,
-):
+def main(args):
     import time
     start_time = time.time()
-    path_2_eval_dataset = Path(path_2_eval_dataset).expanduser()
+    path_2_eval_dataset = Path(args.eval_dataset).expanduser()
     print(f'{path_2_eval_dataset=}')
 
     server = Server()
@@ -255,10 +240,22 @@ def main(
 
     # - Run DSP for Lean
     api_key = os.environ['OPENAI_API_KEY']
-    draft_sampling_params = SamplingParams(n=n_samples, max_tokens=max_tokens, top_p=top_p, temperature=temperature, stop=STOP_TOKENS_DRAFT_V0)
-    sketch_sampling_params = SamplingParams(n=n_samples, max_tokens=max_tokens, top_p=top_p, temperature=temperature, stop=STOP_TOKENS_SKETCH_V0)
+    draft_sampling_params = SamplingParams(
+        n=args.n_samples,
+        max_tokens=args.max_tokens,
+        top_p=args.top_p,
+        temperature=args.temperature,
+        stop=STOP_TOKENS_DRAFT_V0,
+    )
+    sketch_sampling_params = SamplingParams(
+        n=args.n_samples,
+        max_tokens=args.max_tokens,
+        top_p=args.top_p,
+        temperature=args.temperature,
+        stop=STOP_TOKENS_SKETCH_V0,
+    )
     eng: OpenAI_DSP_Engine = OpenAI_DSP_Engine(
-        model=model,
+        model=args.model,
         api_key=api_key,
         verbose_init=True,
         draft_sampling_params=draft_sampling_params,
@@ -276,9 +273,12 @@ def main(
     # run.finish()
 
 if __name__ == "__main__":
+    import argparse
+
     parser = argparse.ArgumentParser(
         prog='DSP',
-        description="Draft-Sketch-Prove on Lean code"
+        description="Draft-Sketch-Prove on Lean code",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         'mode',
@@ -290,19 +290,19 @@ if __name__ == "__main__":
         help="Evaluation dataset path",
         default=experiment_dir / 'debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json',
     )
-    parser.add_argument("--model", help="Model", default="gpt-4o")
+    parser.add_argument("--model", help="Model", default="gpt-4o", choices=["gpt2", "gpt-3.5-turbo", "gpt-4o", "deepseek-ai/deepseek-math-7b-instruct"])
     parser.add_argument("--start", default=0)
     parser.add_argument("--end", default=sys.maxsize)
-    parser.add_argument("--batchsize", default=10)
-    parser.add_argument("--n-samples", default=1)
-    parser.add_argument("--max-tokens", default=2048)
-    parser.add_argument("--top-p", default=0.95)
-    parser.add_argument("--temperature", default=0.8)
+    parser.add_argument("--batchsize", default=10, help="putnam has 348")
+    parser.add_argument("--n-samples", default=1, help="num seqs to return for given prompt")
+    parser.add_argument("--max-tokens", default=2048, help="Maximum number of tokens in one sample")
+    parser.add_argument("--top-p", default=0.95, help="Sampling top p")
+    parser.add_argument("--temperature", default=0.8, help="Sampling temperature")
     parser.add_argument("--verbose", action='store_true')
     args = parser.parse_args()
 
     if args.mode == "eval":
-        main(**args)
+        main(args)
     elif args.mode == "prompts":
         prompt = get_prompt_sketch_template_4_lean_v0(verbose=args.verbose)
         print(prompt)
