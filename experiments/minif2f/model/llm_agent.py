@@ -3,7 +3,7 @@ import collections, unittest
 from pantograph.search import Agent
 from pantograph.server import Server, TacticFailure, ServerError
 from pantograph.expr import Expr, Tactic, GoalState
-from pantograph.gen_tactic import LEAN4_REWRITE, select_tactic
+from .gen_tactic import LEAN4_REWRITE, select_tactic
 import sglang as sgl
 
 class LLMAgent(Agent):
