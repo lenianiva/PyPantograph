@@ -25,7 +25,12 @@ def try_test_data(server, agent, entry: dict, max_steps: int, max_trials_per_goa
     informal_stmt = entry["informal_stmt"]
     informal_proof = entry["informal_proof"]
 
-    goal_state, = server.load_sorry(command)
+    goal_states = server.load_sorry(command)
+
+    if len(goal_states) == 0:
+        return None
+
+    goal_state, = goal_states
     try:
         return agent.search(
             server=server,
@@ -67,7 +72,7 @@ def run_eval(args):
         if file_name.is_file():
             print(f"Skipping {datum['id']}")
             continue
-        server = Server(imports=["MiniF2F"], project_path=project_path, lean_path=lean_path, options=["maxHeartbeats=0"])
+        server = Server(imports=["MiniF2F"], project_path=project_path, lean_path=lean_path, core_options=["maxHeartbeats=0"])
         agent = LLMAgent(server, use_hammer=args.use_hammer, use_llm=args.use_llm)
         result = try_test_data(server, agent, datum, max_steps=args.max_steps, max_trials_per_goal=args.max_trials_per_goal)
         if result is None:
