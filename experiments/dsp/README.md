@@ -16,6 +16,14 @@ Then run `main.py`
 python3 experiments/dsp/main.py -h
 ```
 
+The main command for running DSP is `eval`. Due to the multitude of data format
+out there, use the `--format` flag to specify the data format. For example,
+running DSP on minif2f is:
+
+``` sh
+python3 experiments/dsp/main.py eval --dataset ../minif2f/valid.jsonl --format minif2f
+```
+
 ## Related work
 
 ### Tony's AF
