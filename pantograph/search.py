@@ -52,8 +52,7 @@ class Agent:
             self,
             state: GoalState,
             goal_id: int,
-            informal_stmt: str,
-            informal_proof: str) -> Optional[Tactic]:
+        ) -> Optional[Tactic]:
         """
         Implement this function to generate the next tactic for a goal
         """
@@ -74,8 +73,6 @@ class Agent:
     def search(self,
                server: Server,
                goal_state: GoalState,
-               informal_stmt: str = "",
-               informal_proof: str = "",
                max_steps: int = 100,
                max_trials_per_goal: int = 5,
                verbose: bool = False) -> SearchResult:
@@ -83,13 +80,12 @@ class Agent:
         Searches using th
         """
         assert server.is_automatic(), "Search must be run in automatic mode"
-        assert len(goal_state.goals) == 1, "Initial state must have exactly one goal"
 
         initial_state = SearchState(
             state=goal_state,
             parent=None,
             parent_goal_id=None,
-            priorities=[0.0]
+            priorities=[0.0 for _ in goal_state.goals]
         )
         search_stack = [initial_state]
         """
@@ -115,7 +111,7 @@ class Agent:
                 tactic = None
             else:
                 # Generate tactic for this goal
-                tactic = self.next_tactic(search_state.state, goal_id, informal_stmt, informal_proof)
+                tactic = self.next_tactic(search_state.state, goal_id)
 
             if verbose:
                 print(f"Next tactic: {tactic}")
@@ -186,8 +182,7 @@ class DumbAgent(Agent):
             self,
             state: GoalState,
             goal_id: int,
-            informal_stmt: str,
-            informal_proof: str) -> Optional[Tactic]:
+    ) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 
