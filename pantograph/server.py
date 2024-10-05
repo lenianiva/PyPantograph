@@ -19,6 +19,8 @@ class TacticFailure(Exception):
 class ServerError(Exception):
     pass
 
+DEFAULT_CORE_OPTIONS=["maxHeartbeats=0", "maxRecDepth=10000"]
+
 class Server:
 
     def __init__(self,
@@ -28,7 +30,7 @@ class Server:
                  # Options for executing the REPL.
                  # Set `{ "automaticMode" : False }` to handle resumption by yourself.
                  options={},
-                 core_options=["maxHeartbeats=0"],
+                 core_options=DEFAULT_CORE_OPTIONS,
                  timeout=60,
                  maxread=1000000):
         """

@@ -26,6 +26,7 @@ tiktoken = "^0.7.0"
 torch = "2.2.1"
 wandb = "0.17.0"
 # vllm = "0.4.1"
+termcolor = "^2.4.0"
 
 [build-system]
 requires = ["poetry-core"]

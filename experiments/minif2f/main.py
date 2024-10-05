@@ -3,9 +3,10 @@
 import subprocess, json, argparse
 from typing import Optional
 from pathlib import Path
-from pantograph.server import Server, ServerError
+from pantograph.server import Server, ServerError, DEFAULT_CORE_OPTIONS
 from pantograph.search import SearchResult
 from model.llm_agent import LLMAgent
+from model.options import CORE_OPTIONS
 
 PATH_EXPERIMENT = Path(__file__).parent.resolve()
 
@@ -72,8 +73,18 @@ def run_eval(args):
         if file_name.is_file():
             print(f"Skipping {datum['id']}")
             continue
-        server = Server(imports=["MiniF2F"], project_path=project_path, lean_path=lean_path)
-        agent = LLMAgent(server, use_hammer=args.use_hammer, use_llm=args.use_llm)
+        server = Server(
+            imports=["Mathlib", "Aesop"],
+            project_path=project_path,
+            lean_path=lean_path,
+            core_options=CORE_OPTIONS,
+        )
+        agent = LLMAgent(
+            server,
+            use_hammer=args.use_hammer,
+            use_llm=args.use_llm,
+            feedback_turns=args.feedback_turns,
+        )
         result = try_test_data(server, agent, datum, max_steps=args.max_steps, max_trials_per_goal=args.max_trials_per_goal)
         #server.gc()
         if result is None:
@@ -87,8 +98,9 @@ def run_eval(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-                    prog='MiniF2F Search',
-                    description='Executes LLM on MiniF2F Search')
+        prog='MiniF2F Search',
+        description='Executes LLM on MiniF2F Search',
+    )
     parser.add_argument('--use-hammer', action='store_true')
     parser.add_argument(
         '--dry-run',
@@ -96,8 +108,9 @@ if __name__ == '__main__':
         help="List the data used, but don't run")
     parser.add_argument('--validation', action='store_true')
     parser.add_argument('--use-llm', action='store_true')
-    parser.add_argument('-s', '--max-steps', default=50)
-    parser.add_argument('-t', '--max-trials-per-goal', default=2)
+    parser.add_argument('--max-steps', default=50)
+    parser.add_argument('--max-trials-per-goal', default=2)
+    parser.add_argument('--feedback-turns', default=2)
     args = parser.parse_args()
 
     if args.dry_run:

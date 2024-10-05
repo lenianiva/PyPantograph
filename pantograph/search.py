@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import  Optional
 import collections, unittest
@@ -44,7 +45,9 @@ class Agent:
     """
     An agent interface for proof search
     """
+    tactic_feedback: Optional[str] = None
 
+    @abstractmethod
     def next_tactic(
             self,
             state: GoalState,
@@ -54,14 +57,15 @@ class Agent:
         """
         Implement this function to generate the next tactic for a goal
         """
-        return None
 
+    @abstractmethod
     def guidance(self, state: GoalState) -> list[float]:
         """
         Return a list of priorities determining which goal should be searched
         first. This will not be called on states with one or zero goals.
         """
         return [0.0 for _ in state.goals]
+    @abstractmethod
     def reset(self):
         """
         Called after search
@@ -116,11 +120,13 @@ class Agent:
             if verbose:
                 print(f"Next tactic: {tactic}")
             if not tactic:
+                # resets the feedback
+                self.tactic_feedback = None
                 # pop the current state and continue to the next
                 search_stack.pop(-1)
                 if not search_stack:
                     if verbose:
-                        print("Tactic list has been exhausted")
+                        print("Search stack has been exhausted")
                     self.reset()
                     return SearchResult(success=False, steps=i_step)
                 continue
@@ -147,6 +153,7 @@ class Agent:
             except TacticFailure as t:
                 if verbose:
                     print(f"Tactic failed: {t}")
+                self.tactic_feedback = str(t)
                 # try the next tactic. this one failed
 
         if verbose:
