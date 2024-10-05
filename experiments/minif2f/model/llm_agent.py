@@ -31,7 +31,7 @@ class LLMAgent(Agent):
         if use_hammer:
             self.tactics = [
                 "aesop",
-                "simp",
+                #"simp",
                 #"rfl",
                 #"decide",
             ]

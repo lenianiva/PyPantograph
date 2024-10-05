@@ -3,6 +3,7 @@
 import subprocess, json, argparse
 from typing import Optional
 from pathlib import Path
+from termcolor import colored
 from pantograph.server import Server, ServerError, DEFAULT_CORE_OPTIONS
 from pantograph.search import SearchResult
 from model.llm_agent import LLMAgent
@@ -71,8 +72,9 @@ def run_eval(args):
         file_name = output_file_name(datum, args.use_hammer, args.use_llm)
         placeholder_file_name = file_name.with_suffix('.placeholder')
         if file_name.is_file():
-            print(f"Skipping {datum['id']}")
+            print(colored(f"Skipping {datum['id']}", "green"))
             continue
+        print(colored(f"Evaluating on {datum['id']} ...", "blue"))
         server = Server(
             imports=["Mathlib", "Aesop"],
             project_path=project_path,

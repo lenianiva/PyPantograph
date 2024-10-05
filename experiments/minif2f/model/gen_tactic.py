@@ -119,7 +119,7 @@ def select_tactic(
             tmp += sgl.assistant(sgl.gen("tactic", max_tokens=64))
             # print("==tmp===")
             # print(tmp["tactic"])
-            tactic = extract_code_from_llm_output(tmp["tactic"]).strip()
+            tactic = postprocess_reply(extract_code_from_llm_output(tmp["tactic"]))
         s += sgl.assistant(f"```\n{tactic}\n```")
         success, new_state = apply_tactic(server, state, goal_id, tactic)
         # print("===execute===")
@@ -156,6 +156,12 @@ def extract_code_from_llm_output(reply):
         i = reply.find("```")
         reply = reply[:i]
         return reply
+    return reply
+
+def postprocess_reply(reply):
+    reply = reply.strip()
+    if reply and reply[-1] == ",":
+        reply = reply[:-1]
     return reply
 
 class TestServerSGL(unittest.TestCase):
