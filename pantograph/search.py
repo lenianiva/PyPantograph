@@ -80,13 +80,12 @@ class Agent:
         Searches using th
         """
         assert server.is_automatic(), "Search must be run in automatic mode"
-        assert len(goal_state.goals) == 1, "Initial state must have exactly one goal"
 
         initial_state = SearchState(
             state=goal_state,
             parent=None,
             parent_goal_id=None,
-            priorities=[0.0]
+            priorities=[0.0 for _ in goal_state.goals]
         )
         search_stack = [initial_state]
         """
