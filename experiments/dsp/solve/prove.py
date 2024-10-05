@@ -11,6 +11,8 @@ class HammerAgent(Agent):
         self.goal_tactic_id_map = collections.defaultdict(lambda : 0)
         self.tactics = [
             "aesop",
+            "simp",
+            "linarith",
         ]
 
     def next_tactic(
