@@ -4,8 +4,16 @@ based on Sean Welleck's DSP for Isabelle: https://github.com/wellecks/ntptutoria
 
 ## Execution
 
+First of all, build the experiment repo.
+
 ``` sh
-python3 experiments/dsp/main.py eval
+# experiments/dsp
+cd lean_src_proj
+lake build
+```
+Then run `main.py`
+``` sh
+python3 experiments/dsp/main.py -h
 ```
 
 ## Related work

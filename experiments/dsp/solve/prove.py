@@ -17,8 +17,7 @@ class HammerAgent(Agent):
             self,
             state: GoalState,
             goal_id: int,
-            informal_stmt: str,
-            informal_proof: str) -> Optional[Tactic]:
+        ) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 

@@ -1,4 +1,4 @@
-import sys, os, json
+import sys, os, json, subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Union, Any, Tuple
@@ -221,7 +221,13 @@ def full_proof_search_dsp_lean(
         server.gc()
     return
 
+
 experiment_dir = Path(__file__).resolve().parent
+
+def get_project_and_lean_path():
+    cwd = experiment_dir / 'lean_src_proj'
+    p = subprocess.check_output(['lake', 'env', 'printenv', 'LEAN_PATH'], cwd=cwd)
+    return cwd, p
 
 # -- Main
 
@@ -231,7 +237,12 @@ def main(args):
     path_2_eval_dataset = Path(args.eval_dataset).expanduser()
     print(f'{path_2_eval_dataset=}')
 
-    server = Server()
+    project_path, lean_path = get_project_and_lean_path()
+    server = Server(
+        imports=["Mathlib", "Aesop"],
+        project_path=project_path,
+        lean_path=lean_path,
+    )
 
     # - Start wandb run
     # print(f'\n\n-- Setup params')
