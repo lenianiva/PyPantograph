@@ -88,6 +88,7 @@ def run_eval(args):
             feedback_turns=args.feedback_turns,
         )
         result = try_test_data(server, agent, datum, max_steps=args.max_steps, max_trials_per_goal=args.max_trials_per_goal)
+        print(colored(f"Result on {datum['id']}: {result}", "blue"))
         #server.gc()
         if result is None:
             with open(placeholder_file_name, 'w') as f:
