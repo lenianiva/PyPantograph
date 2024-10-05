@@ -100,7 +100,7 @@ SYSTEM_PROMPT_SKETCH_V0 = 'You are an expert mathematician and an expert in the 
 STOP_TOKENS_SKETCH_V0: list[str] = ['Informal:', '(*### Problem', '###Solution', 'Formal:']
 prompt_sketch_template_lean4_v0 = ("Translate the informal solution into a sketch in the "
 f"formal Lean 4 proof. Add {TOKEN_PLACEHOLDER} in the formal sketch whenever possible. "
-f"{TOKEN_PLACEHOLDER} will be used to call a automated theorem prover or tactic in Lean 4. "
+f"{TOKEN_PLACEHOLDER} will be used to call a automated theorem prover or tactic in Lean 4. Do not use any lemmas."
 "Here are some examples:\n"
 )
 def get_prompt_sketch_template_4_lean_v0(

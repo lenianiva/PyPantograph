@@ -183,7 +183,20 @@ def prove(
     # If this throws index out of bound errors it means the source doesn't contain walled off Lean sections.
     print(colored("Sketch:", "yellow"), fl_sketch)
     lean_code, = [extract_lean_code(sketch)[0] for sketch in fl_sketch]
-    state, = server.load_sorry(lean_code)
+    print(colored("Lean code:", "light_grey"), lean_code)
+    states = server.load_sorry(lean_code)
+
+    if len(states) != 1:
+        print(colored("Model must output one compilation unit", "red"))
+        raise NotImplemented
+
+    state = states[0]
+
+    if isinstance(state, list) and len(state) > 0:
+        print(colored("Sketch failed:", "red"), "\n".join(state))
+        # what should we do?
+        raise NotImplemented
+
     agent = HammerAgent()
     result = agent.search(server, state)
     print(colored(f"Result: {result}", "blue"))
