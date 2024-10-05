@@ -20,7 +20,7 @@ class Datum:
     def __str__(self):
         if self.id:
             return self.id
-        return str(self.nl_problem)
+        return self.nl_problem_str
 
     @property
     def nl_problem_str(self) -> Optional[str]:
