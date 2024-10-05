@@ -4,8 +4,24 @@ based on Sean Welleck's DSP for Isabelle: https://github.com/wellecks/ntptutoria
 
 ## Execution
 
+First of all, build the experiment repo.
+
 ``` sh
-python3 experiments/dsp/main.py eval
+# experiments/dsp
+cd lean_src_proj
+lake build
+```
+Then run `main.py`
+``` sh
+python3 experiments/dsp/main.py -h
+```
+
+The main command for running DSP is `eval`. Due to the multitude of data format
+out there, use the `--format` flag to specify the data format. For example,
+running DSP on minif2f is:
+
+``` sh
+python3 experiments/dsp/main.py eval --dataset ../minif2f/valid.jsonl --format minif2f
 ```
 
 ## Related work

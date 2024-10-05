@@ -1,13 +1,13 @@
-import sys, os, json
+import sys, os, json, subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union, Any
-from collections import namedtuple
+from typing import Union, Any, Tuple
 from tqdm import tqdm
 from openai import OpenAI
 import wandb
 from tenacity import retry, stop_after_attempt, wait_exponential
 from pantograph import Server
+from termcolor import colored
 
 from solve.prompts import (
     extract_lean_code,
@@ -19,6 +19,8 @@ from solve.prompts import (
     STOP_TOKENS_SKETCH_V0,
     get_prompt_sketch_template_4_lean_v0,
 )
+from solve.prove import HammerAgent
+from solve.data import Datum
 
 # prompt_draft_template_lean4_v0 = "Draft an informal solution similar to the one below. The informal solution will be used to sketch a formal proof in the Lean 4 Proof Assistant. Here are some examples of informal problem solutions pairs:\n\nInformal:\n(*### Problem\n\nProve that for any natural number n, n + 0 = n.\n\n### Solution\n\nConsider any natural number n. From properties of addition, adding zero does not change its values. Thus, n + 0 = n.*)\n\nInformal:\n(*### Problem\n\nProve that for any natural number n, n + (m + 1) = (n + m) + 1.\n\n### Solution\n\nConsider any natural numbers n and m. From properties of addition, adding 1 to the sum of n and m is the same as first adding m to n and then adding 1. Thus, n + (m + 1) = (n + m) + 1.*)\n\nInformal:\n(*### Problem\n\nProve that for any natural number n and m, n + m = m + n.\n\n### Solution\n\nConsider any natural numbers n and m. We will do induction on n. Base case: 0 + m = m + 0 by properties of addition. Inductive step, we have n + m = m + n. Then (n + 1) + m = (n + m) + 1 = (m + n) + 1 = m + (n + 1). Thus, by induction, n + m = m + n, qed.*)\n\nInformal: \n(*### Problem\n\n{nl_problem}\n\n### Solution\n"
 
@@ -39,25 +41,25 @@ class Engine:
 
 class OpenAI_DSP_Engine(Engine):
     def __init__(
-                self,
-                model: str,
-                api_key: str = None,
-                base_url: str = None,  # e.g., Mistral-7B-Instrcut-v0.2 on http://120.77.8.29:12345
-                # Draft Params
-                draft_system_prompt: str = SYSTEM_PROMPT_DRAFT_V0,  # 'You are an expert mathematician and an expert in the Lean 4 Proof Assistant.' (goal do draft)
-                draft_prompt_template: str = prompt_draft_template_lean4_v0,
-                draft_sampling_params = None,
-                draft_stop_tokens: list[str] = STOP_TOKENS_DRAFT_V0,
-                # Sketch Params
-                sketch_system_prompt: str = SYSTEM_PROMPT_SKETCH_V0,
-                sketch_prompt_template: str = prompt_sketch_template_lean4_v0,
-                sketch_sampling_params = None,
-                sketch_stop_tokens: list[str] = STOP_TOKENS_SKETCH_V0,
-                # Prove Params
-                # ...TODO not sure if needed right now...
-                # Misc
-                verbose_init: bool = True,
-                ):
+            self,
+            model: str,
+            api_key: str = None,
+            base_url: str = None,  # e.g., Mistral-7B-Instrcut-v0.2 on http://120.77.8.29:12345
+            # Draft Params
+            draft_system_prompt: str = SYSTEM_PROMPT_DRAFT_V0,  # 'You are an expert mathematician and an expert in the Lean 4 Proof Assistant.' (goal do draft)
+            draft_prompt_template: str = prompt_draft_template_lean4_v0,
+            draft_sampling_params = None,
+            draft_stop_tokens: list[str] = STOP_TOKENS_DRAFT_V0,
+            # Sketch Params
+            sketch_system_prompt: str = SYSTEM_PROMPT_SKETCH_V0,
+            sketch_prompt_template: str = prompt_sketch_template_lean4_v0,
+            sketch_sampling_params = None,
+            sketch_stop_tokens: list[str] = STOP_TOKENS_SKETCH_V0,
+            # Prove Params
+            # ...TODO not sure if needed right now...
+            # Misc
+            verbose_init: bool = True,
+        ):
         super().__init__()
         print(f'{base_url=}') if verbose_init else None
 
@@ -82,25 +84,25 @@ class OpenAI_DSP_Engine(Engine):
 
 @retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=2, max=128))
 def autoformalize_prob(
-    eng,
-    data_pt: dict,
-    verbose: bool = False,
-):
+        eng: Engine,
+        datum: Datum,
+        verbose: bool = False,
+    ):
     """ Autoformalize natural language problem to formal language problem. """
-    ...
+    pass
 
 @retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=2, max=128))
 def draft(
-    eng,
-    data_pt: dict,
-    verbose: bool = False,
+        eng: Engine,
+        datum: Datum,
+        verbose: bool = False,
     ) -> list:
     """
     Creates (informal nl) draft (nl soln, nl proof sketch) for latter use in a formal proof sketch.
         y_pred_nl ~ draft(eng, x_nl_prob, P_draft)
     """
     # Make prompt from template
-    nl_problem: str = data_pt['nl_problem'][0]
+    nl_problem: str = datum.nl_problem_str
     prompt = eng.draft_prompt_template.replace('{nl_problem}', nl_problem)
     # Get all **completions** to single prompt, one (in) -> many (out)
     # ref: https://platform.openai.com/docs/api-reference/chat/object
@@ -116,32 +118,35 @@ def draft(
         stop=eng.draft_sampling_params.stop[:3],
         )
     # Get all completions for single prompt
-    completions: list[str] = [completion.message.content for completion in response.choices]  # response.choices[i].message
+    completions: list[str] = [
+        completion.message.content
+        for completion in response.choices
+    ]  # response.choices[i].message
     drafts: list[str] = completions
     return drafts
 
 @retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=2, max=128))
 def sketch(
-    eng,
-    data_pt: dict,
-    drafts: list,
-    autoformalize_prob_in_prompt: bool = False,
-    verbose: bool = False,
-    ) -> list:
+        eng: Engine,
+        datum: Datum,
+        drafts: list[str],
+        autoformalize_prob_in_prompt: bool = False,
+        verbose: bool = False,
+    ) -> Tuple[list[str], str]:
     """
     Creates (formal fl) sketch (fl proof sketch) for latter use in a formal proof sketch.
         z_pred_fl ~ sketch(eng, x_nl_prob, y_pred_nl, x_fl_prob, P_sketch)
     """
     assert len(drafts) == 1, f"For now only 1 draft."
     # Make prompt from template
-    x_nl_problem: str = data_pt['nl_problem'][0]
+    x_nl_problem: str = datum.nl_problem_str
     y_nl_solution: str = drafts[0]
     x_fl_problem = None
     if autoformalize_prob_in_prompt:
         # prompt = eng.sketch_prompt_template.replace('{nl_problem}', x_nl_problem).replace('{nl_solution}', y_nl_solution)
         not NotImplemented
     else:
-        x_fl_problem = data_pt['fl_problem'][0] if 'fl_problem' in data_pt else autoformalize_prob(eng, data_pt)
+        x_fl_problem = datum.fl_problem if datum.fl_problem else autoformalize_prob(eng, datum)
         prompt = eng.sketch_prompt_template.replace('{fl_problem}', x_nl_problem).replace('{fl_problem}', y_nl_solution)
     # Get all **completions** to single prompt, one (in) -> many (out), ref: https://platform.openai.com/docs/api-reference/chat/object
     response: Any = eng.llm.chat.completions.create(
@@ -162,11 +167,11 @@ def sketch(
     return sketches, x_fl_problem
 
 def prove(
-    eng: Engine,
-    server: Server,
-    fl_prob: str,
-    fl_sketch: list[str],
-):
+        eng: Engine,
+        server: Server,
+        fl_prob: str,
+        fl_sketch: list[str],
+    ):
     """
 
     Complete formal sketch and check if it proves the theorem.
@@ -176,61 +181,89 @@ def prove(
 
     """
     # If this throws index out of bound errors it means the source doesn't contain walled off Lean sections.
+    print(colored("Sketch:", "yellow"), fl_sketch)
     lean_code, = [extract_lean_code(sketch)[0] for sketch in fl_sketch]
     state, = server.load_sorry(lean_code)
+    agent = HammerAgent()
+    result = agent.search(server, state)
+    print(colored(f"Result: {result}", "blue"))
 
-    print(state)
-    raise RuntimeError("Not implemented")
-    # -- Prove
-    correct: bool = False
-    # -- Return
-    return correct
+    return result
 
 # -- DSP for Lean
 
 def single_proof_search_dsp_lean(
         eng: Engine,
         server: Server,
-        data_pt: dict,
+        datum: Datum,
     ) -> bool:
     # -- Draft: [y_nl_pred_draft]_n ~ draft(eng, x_nl_prob, P_draft)
-    y_nl_pred_drafts = draft(eng, data_pt)
+    y_nl_pred_drafts = draft(eng, datum)
 
     # -- Sketch: z_fl_pred_sketch ~ sketch(eng, x_nl_prob, [y_nl_pred_draft]_n, x_fl_prob, P_sketch)
-    z_fl_pred_sketches, x_fl_prob = sketch(eng, data_pt, y_nl_pred_drafts)
+    z_fl_pred_sketches, x_fl_prob = sketch(eng, datum, y_nl_pred_drafts)
 
     # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
-    correct: bool = prove(eng, server, x_fl_prob, z_fl_pred_sketches)
+    result: bool = prove(eng, server, x_fl_prob, z_fl_pred_sketches)
 
     # -- Return
-    return correct
+    return result
 
 def full_proof_search_dsp_lean(
-    eng: Engine,
-    server: Server,
-    path_2_eval_dataset: Path,
-):
-    # -- Get eval data
-    eval_dataset: list[dict] = json.load(open(path_2_eval_dataset, 'r'))
-    print(f'{len(eval_dataset)=}')
+        eng: Engine,
+        server: Server,
+        data: list[Datum],
+    ):
+    print(colored(f"DSP on {len(data)} points", "blue", attrs=["bold", "underline"]))
     # -- Proof search by DSP over all eval data
-    for data_pt in tqdm(eval_dataset, total=len(eval_dataset), desc='DSP proof loop per data point in benchmark.'):
-        print(f'{data_pt=}')
-        flag = single_proof_search_dsp_lean(eng, server, data_pt)
-        server.gc()
+    for datum in tqdm(data, total=len(data), desc='DSP proof loop per data point in benchmark.'):
+        print("Problem:", colored(datum.id, "cyan"))
+        result = single_proof_search_dsp_lean(eng, server, datum)
+        print(result)
+        #server.gc()
     return
 
+
 experiment_dir = Path(__file__).resolve().parent
+
+def get_project_and_lean_path():
+    cwd = experiment_dir / 'lean_src_proj'
+    p = subprocess.check_output(['lake', 'env', 'printenv', 'LEAN_PATH'], cwd=cwd)
+    return cwd, p
+
+def load_data(args) -> list[Datum]:
+    p = Path(args.dataset).expanduser()
+    data = None
+    if p.suffix == ".json":
+        data = [
+            Datum.load(obj, data_format=args.format)
+            for obj in json.load(open(p, 'r'))
+        ]
+    elif p.suffix == ".jsonl":
+        with open(p, 'r') as f:
+            data = [
+                Datum.load(json.loads(line), data_format=args.format)
+                for line in list(f)
+            ]
+    else:
+        raise ValueError(f"Unknown data suffix: {p.suffix}")
+    data = [datum for datum in data if datum]
+    return data
 
 # -- Main
 
 def main(args):
     import time
     start_time = time.time()
-    path_2_eval_dataset = Path(args.eval_dataset).expanduser()
-    print(f'{path_2_eval_dataset=}')
+    data_eval = load_data(args)
 
-    server = Server()
+    # Start server
+    project_path, lean_path = get_project_and_lean_path()
+    server = Server(
+        imports=["Mathlib", "Aesop"],
+        project_path=project_path,
+        lean_path=lean_path,
+    )
 
     # - Start wandb run
     # print(f'\n\n-- Setup params')
@@ -269,9 +302,9 @@ def main(args):
     )
 
     # - Full proof search with DSP
-    print(f'\n\n-- Full proof search with DSP')
-    full_proof_search_dsp_lean(eng, server, path_2_eval_dataset)
-    print(f"Time taken: {time.time() - start_time:.2f} seconds, or {(time.time() - start_time) / 60:.2f} minutes, or {(time.time() - start_time) / 3600:.2f} hours.\a")
+    full_proof_search_dsp_lean(eng, server, data_eval)
+    msg = f"Time taken: {time.time() - start_time:.2f} seconds, or {(time.time() - start_time) / 60:.2f} minutes, or {(time.time() - start_time) / 3600:.2f} hours.\a"
+    print(colored(msg, "magenta"))
 
     # - End run
     # wandb.config.update(config)
@@ -292,11 +325,22 @@ if __name__ == "__main__":
         choices=['eval', 'prompts'],
     )
     parser.add_argument(
-        "--eval-dataset",
+        "--dataset",
         help="Evaluation dataset path",
         default=experiment_dir / 'debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json',
     )
-    parser.add_argument("--model", help="Model", default="gpt-4o", choices=["gpt2", "gpt-3.5-turbo", "gpt-4o", "deepseek-ai/deepseek-math-7b-instruct"])
+    parser.add_argument(
+        "--model",
+        help="Model",
+        default="gpt-4o",
+        choices=["gpt2", "gpt-3.5-turbo", "gpt-4o", "deepseek-ai/deepseek-math-7b-instruct"],
+    )
+    parser.add_argument(
+        "--format",
+        help="Data format",
+        default="default",
+        choices=["default", "minif2f"],
+    )
     parser.add_argument("--start", default=0)
     parser.add_argument("--end", default=sys.maxsize)
     parser.add_argument("--batchsize", default=10, help="putnam has 348")

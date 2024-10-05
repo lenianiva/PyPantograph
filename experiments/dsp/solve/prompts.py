@@ -166,9 +166,11 @@ def extract_lean_code(
 
         if line.rstrip() == WALL:
             if is_walled_lean:
+                # found wall
                 code = "\n".join(curr) + "\n"
                 code = code.replace("ℕ", "Nat").replace(placeholder, "sorry")
                 lean_codes.append(code)
+                curr = []
             is_walled = False
             is_walled_lean = False
             continue
@@ -186,8 +188,13 @@ class TestPrompts(unittest.TestCase):
         sketch = "```lean\nimport Mathlib.Data.Nat.Basic\nimport Aesop\n\ntheorem n_plus_zero : ∀ n : ℕ, n + 0 = n := by\n   -- Consider any natural number n. We need to show that n + 0 = n.\n   -- Use the fact that adding zero to any natural number does not change its value.\n   have h_nat_add_zero: ∀ n : ℕ, n + 0 = n := <TODO_PROOF_OR_HAMMER>\n   -- Combine facts to close goal\n   <TODO_PROOF_OR_HAMMER>\n```"
         codes = extract_lean_code(sketch)
         self.assertEqual(codes, [
-            "import Mathlib.Data.Nat.Basic\nimport Aesop\n\ntheorem n_plus_zero : ∀ n : Nat, n + 0 = n := by\n   -- Consider any natural number n. We need to show that n + 0 = n.\n   -- Use the fact that adding zero to any natural number does not change its value.\n   have h_nat_add_zero: ∀ n : Nat, n + 0 = n := sorry\n   -- Combine facts to close goal\n   sorry\n"
+            "\ntheorem n_plus_zero : ∀ n : Nat, n + 0 = n := by\n   -- Consider any natural number n. We need to show that n + 0 = n.\n   -- Use the fact that adding zero to any natural number does not change its value.\n   have h_nat_add_zero: ∀ n : Nat, n + 0 = n := sorry\n   -- Combine facts to close goal\n   sorry\n"
         ])
+
+    def test_extract_sketch_minif2f(self):
+        sketch = "To solve the problem formally in Lean 4, we will sketch the proof by breaking down the steps of the informal solution, leveraging Lean 4 tactics and possibly automated theorem proving. Here's how the formal sketch might look:\n\n```lean\nimport Mathlib.Data.Complex.Basic\nimport Aesop\n\n-- Define the complex number z\ndef z : ℂ := (1 + Complex.i) / Real.sqrt 2\n\ntheorem complex_problem_solution : \n  (∑ i in finset.range 12, z ^ (i + 1) ^ 2) * \n  (∑ i in finset.range 12, z ^ -((i + 1) ^ 2)) = 36 := by\n  -- We first compute z as a complex number with a modulus of 1.\n  -- Thus, powers of z represent rotations in the complex plane.\n  have h_mod_z : Complex.abs z = 1 := <TODO_PROOF_OR_HAMMER>\n  -- Recognize that each term z^(k^2) and its reciprocal are conjugates due to modulus 1.\n  have h_conjugates : ∀ k : ℕ, z^(k^2) * (z^(-k^2)) = 1 := <TODO_PROOF_OR_HAMMER>\n  -- The product (z^(1^2) + z^(2^2) + ... + z^(12^2)) * (z^(-1^2) + z^(-2^2) + ... + z^(-12^2))\n  -- simplifies as a result of this conjugate pair property.\n  have h_sum_conjugates : ∑ i in finset.range 12, z ^ (i + 1) ^ 2 = 0 := <TODO_PROOF_OR_HAMMER>\n  have h_sum_reciprocals : ∑ i in finset.range 12, z ^ -((i + 1) ^ 2) = 0 := <TODO_PROOF_OR_HAMMER>\n  -- Combine all the contributions, where non-zero terms contribute to the total sum\n  -- to ensure the final product is 36 based on the angle and distribution of terms.\n  have h_final_sum_product : (∑ i in finset.range 12, z ^ (i + 1) ^ 2) *\n                             (∑ i in finset.range 12, z ^ -((i + 1) ^ 2)) = 36 := <TODO_PROOF_OR_HAMMER>\n  -- Conclude the proof with the calculated product.\n  exact h_final_sum_product\n```\n\nIn this sketch:\n- We define \\( z \\) as the complex number \\(\\frac{1+i}{\\sqrt{2}}\\).\n- We use properties of complex numbers with modulus 1, recognizing rotational symmetry and conjugate pair relations.\n- We use automated tactics (`<TODO_PROOF_OR_HAMMER>`) to handle calculations involving sums, products, and properties of the complex exponentials.\n- Finally, we show that the structure of these complex exponentials simplifies the product to yield the desired result of 36."
+        codes = extract_lean_code(sketch)
+        self.assertEqual(len(codes), 1)
 
 if __name__ == '__main__':
     unittest.main()
