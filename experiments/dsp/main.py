@@ -188,8 +188,7 @@ def prove(
     result = agent.search(server, state)
     print(colored(f"Result: {result}", "blue"))
 
-    raise RuntimeError("Not implemented")
-    return
+    return result
 
 # -- DSP for Lean
 
@@ -219,7 +218,8 @@ def full_proof_search_dsp_lean(
     # -- Proof search by DSP over all eval data
     for datum in tqdm(data, total=len(data), desc='DSP proof loop per data point in benchmark.'):
         print("Problem:", colored(datum.id, "cyan"))
-        flag = single_proof_search_dsp_lean(eng, server, datum)
+        result = single_proof_search_dsp_lean(eng, server, datum)
+        print(result)
         #server.gc()
     return
 
