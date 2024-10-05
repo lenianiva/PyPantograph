@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import  Optional
 import collections, unittest
@@ -44,24 +45,26 @@ class Agent:
     """
     An agent interface for proof search
     """
+    tactic_feedback: Optional[str] = None
 
+    @abstractmethod
     def next_tactic(
             self,
             state: GoalState,
             goal_id: int,
-            informal_stmt: str,
-            informal_proof: str) -> Optional[Tactic]:
+        ) -> Optional[Tactic]:
         """
         Implement this function to generate the next tactic for a goal
         """
-        return None
 
+    @abstractmethod
     def guidance(self, state: GoalState) -> list[float]:
         """
         Return a list of priorities determining which goal should be searched
         first. This will not be called on states with one or zero goals.
         """
         return [0.0 for _ in state.goals]
+    @abstractmethod
     def reset(self):
         """
         Called after search
@@ -70,8 +73,6 @@ class Agent:
     def search(self,
                server: Server,
                goal_state: GoalState,
-               informal_stmt: str = "",
-               informal_proof: str = "",
                max_steps: int = 100,
                max_trials_per_goal: int = 5,
                verbose: bool = False) -> SearchResult:
@@ -111,16 +112,18 @@ class Agent:
                 tactic = None
             else:
                 # Generate tactic for this goal
-                tactic = self.next_tactic(search_state.state, goal_id, informal_stmt, informal_proof)
+                tactic = self.next_tactic(search_state.state, goal_id)
 
             if verbose:
                 print(f"Next tactic: {tactic}")
             if not tactic:
+                # resets the feedback
+                self.tactic_feedback = None
                 # pop the current state and continue to the next
                 search_stack.pop(-1)
                 if not search_stack:
                     if verbose:
-                        print("Tactic list has been exhausted")
+                        print("Search stack has been exhausted")
                     self.reset()
                     return SearchResult(success=False, steps=i_step)
                 continue
@@ -147,6 +150,7 @@ class Agent:
             except TacticFailure as t:
                 if verbose:
                     print(f"Tactic failed: {t}")
+                self.tactic_feedback = str(t)
                 # try the next tactic. this one failed
 
         if verbose:
@@ -179,8 +183,7 @@ class DumbAgent(Agent):
             self,
             state: GoalState,
             goal_id: int,
-            informal_stmt: str,
-            informal_proof: str) -> Optional[Tactic]:
+    ) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 
