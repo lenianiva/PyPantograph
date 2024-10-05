@@ -38,12 +38,14 @@ class LLMAgent(Agent):
         else:
             self.tactics = []
 
+        self.informal_stmt = ""
+        self.informal_proof = ""
+
     def next_tactic(
             self,
             state: GoalState,
             goal_id: int,
-            informal_stmt: str = "",
-            informal_proof: str = "") -> Optional[Tactic]:
+        ) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 
@@ -59,8 +61,8 @@ class LLMAgent(Agent):
                     server=self.server,
                     state=state,
                     goal_id=goal_id,
-                    informal_stmt=informal_stmt,
-                    informal_proof=informal_proof,
+                    informal_stmt=self.informal_stmt,
+                    informal_proof=self.informal_proof,
                     feedback_turns=self.feedback_turns)
                 tactic, new_state = s.ret_value
                 for m in s.messages():

@@ -24,8 +24,8 @@ def read_test_data(use_valid: bool):
 def try_test_data(server, agent, entry: dict, max_steps: int, max_trials_per_goal: int) -> Optional[SearchResult]:
     command = entry["formal_statement"]
     print(command)
-    informal_stmt = entry["informal_stmt"]
-    informal_proof = entry["informal_proof"]
+    agent.informal_stmt = entry["informal_stmt"]
+    agent.informal_proof = entry["informal_proof"]
 
     goal_states = server.load_sorry(command)
 
@@ -37,8 +37,6 @@ def try_test_data(server, agent, entry: dict, max_steps: int, max_trials_per_goa
         return agent.search(
             server=server,
             goal_state=goal_state,
-            informal_stmt=informal_stmt,
-            informal_proof=informal_proof,
             verbose=True,
             max_steps=max_steps,
             max_trials_per_goal=max_trials_per_goal
@@ -87,7 +85,13 @@ def run_eval(args):
             use_llm=args.use_llm,
             feedback_turns=args.feedback_turns,
         )
-        result = try_test_data(server, agent, datum, max_steps=args.max_steps, max_trials_per_goal=args.max_trials_per_goal)
+        result = try_test_data(
+            server,
+            agent,
+            datum,
+            max_steps=args.max_steps,
+            max_trials_per_goal=args.max_trials_per_goal,
+        )
         print(colored(f"Result on {datum['id']}: {result}", "blue"))
         #server.gc()
         if result is None:

@@ -97,7 +97,8 @@ def multi_turn_question(s, question_1, question_2):
 @sgl.function
 def select_tactic(
         s, server, state, goal_id,
-        informal_stmt: str = "", informal_proof: str = "",
+        informal_stmt: str = "",
+        informal_proof: str = "",
         feedback_turns: int = 5):
 
     s += sgl.system("You are an expert in Lean. Choose the next ONE tactic to run given the current proof state and goals.")
