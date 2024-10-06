@@ -3,33 +3,40 @@
 import subprocess, json, argparse
 from typing import Optional
 from pathlib import Path
-from pantograph.server import Server, ServerError
+from termcolor import colored
+from pantograph.server import Server, ServerError, DEFAULT_CORE_OPTIONS
 from pantograph.search import SearchResult
-from pantograph.search_llm import LLMAgent
+from model.llm_agent import LLMAgent
+from model.options import CORE_OPTIONS
+
+PATH_EXPERIMENT = Path(__file__).parent.resolve()
 
 def get_project_and_lean_path():
-    cwd = Path(__file__).parent.resolve() / 'Example'
+    cwd = PATH_EXPERIMENT / 'MiniF2F'
     p = subprocess.check_output(['lake', 'env', 'printenv', 'LEAN_PATH'], cwd=cwd)
     return cwd, p
 
 def read_test_data(use_valid: bool):
-    jsonl_path = Path(__file__).parent / ('valid.jsonl' if use_valid else 'test.jsonl')
+    jsonl_path = PATH_EXPERIMENT / ('valid.jsonl' if use_valid else 'test.jsonl')
     with open(jsonl_path, 'r') as f:
         return [json.loads(l) for l in list(f)]
 
 def try_test_data(server, agent, entry: dict, max_steps: int, max_trials_per_goal: int) -> Optional[SearchResult]:
     command = entry["formal_statement"]
     print(command)
-    informal_stmt = entry["informal_stmt"]
-    informal_proof = entry["informal_proof"]
+    agent.informal_stmt = entry["informal_stmt"]
+    agent.informal_proof = entry["informal_proof"]
 
-    goal_state, = server.load_sorry(command)
+    goal_states = server.load_sorry(command)
+
+    if len(goal_states) == 0:
+        return None
+
+    goal_state, = goal_states
     try:
         return agent.search(
             server=server,
             goal_state=goal_state,
-            informal_stmt=informal_stmt,
-            informal_proof=informal_proof,
             verbose=True,
             max_steps=max_steps,
             max_trials_per_goal=max_trials_per_goal
@@ -44,7 +51,7 @@ def output_file_name(datum, use_hammer: bool, use_llm: bool):
         folder += '-hammer'
     if use_llm:
         folder += '-llm'
-    folder = Path(__file__).parent / folder
+    folder = PATH_EXPERIMENT / folder
     folder.mkdir(exist_ok=True, parents=True)
     return folder / f"{name}.json"
 
@@ -63,11 +70,30 @@ def run_eval(args):
         file_name = output_file_name(datum, args.use_hammer, args.use_llm)
         placeholder_file_name = file_name.with_suffix('.placeholder')
         if file_name.is_file():
-            print(f"Skipping {datum['id']}")
+            print(colored(f"Skipping {datum['id']}", "green"))
             continue
-        server = Server(imports=["Example"], project_path=project_path, lean_path=lean_path, options=["maxHeartbeats=0"])
-        agent = LLMAgent(server, use_hammer=args.use_hammer, use_llm=args.use_llm)
-        result = try_test_data(server, agent, datum, max_steps=args.max_steps, max_trials_per_goal=args.max_trials_per_goal)
+        print(colored(f"Evaluating on {datum['id']} ...", "blue"))
+        server = Server(
+            imports=["Mathlib", "Aesop"],
+            project_path=project_path,
+            lean_path=lean_path,
+            core_options=CORE_OPTIONS,
+        )
+        agent = LLMAgent(
+            server,
+            use_hammer=args.use_hammer,
+            use_llm=args.use_llm,
+            feedback_turns=args.feedback_turns,
+        )
+        result = try_test_data(
+            server,
+            agent,
+            datum,
+            max_steps=args.max_steps,
+            max_trials_per_goal=args.max_trials_per_goal,
+        )
+        print(colored(f"Result on {datum['id']}: {result}", "blue"))
+        #server.gc()
         if result is None:
             with open(placeholder_file_name, 'w') as f:
                 json.dump({ 'id': datum['id'] }, f)
@@ -79,8 +105,9 @@ def run_eval(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-                    prog='MiniF2F Search',
-                    description='Executes LLM on MiniF2F Search')
+        prog='MiniF2F Search',
+        description='Executes LLM on MiniF2F Search',
+    )
     parser.add_argument('--use-hammer', action='store_true')
     parser.add_argument(
         '--dry-run',
@@ -88,8 +115,9 @@ if __name__ == '__main__':
         help="List the data used, but don't run")
     parser.add_argument('--validation', action='store_true')
     parser.add_argument('--use-llm', action='store_true')
-    parser.add_argument('-s', '--max-steps', default=50)
-    parser.add_argument('-t', '--max-trials-per-goal', default=2)
+    parser.add_argument('--max-steps', default=50)
+    parser.add_argument('--max-trials-per-goal', default=2)
+    parser.add_argument('--feedback-turns', default=2)
     args = parser.parse_args()
 
     if args.dry_run:

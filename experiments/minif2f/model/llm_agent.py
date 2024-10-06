@@ -3,7 +3,8 @@ import collections, unittest
 from pantograph.search import Agent
 from pantograph.server import Server, TacticFailure, ServerError
 from pantograph.expr import Expr, Tactic, GoalState
-from pantograph.gen_tactic import LEAN4_REWRITE, select_tactic
+from .gen_tactic import LEAN4_REWRITE, select_tactic
+from .options import CORE_OPTIONS
 import sglang as sgl
 
 class LLMAgent(Agent):
@@ -12,7 +13,9 @@ class LLMAgent(Agent):
     """
 
     def __init__(self, server,
-                 use_hammer=True, use_llm=True):
+                 use_hammer=True,
+                 use_llm=True,
+                 feedback_turns=3):
         super().__init__()
         self.n_trials = 5
         self.server = server
@@ -24,6 +27,7 @@ class LLMAgent(Agent):
 
         self.use_hammer = use_hammer
         self.use_llm = use_llm
+        self.feedback_turns = feedback_turns
         if use_hammer:
             self.tactics = [
                 "aesop",
@@ -34,7 +38,14 @@ class LLMAgent(Agent):
         else:
             self.tactics = []
 
-    def next_tactic(self, state: GoalState, goal_id: int, informal_stmt:str="",  informal_proof:str="") -> Optional[Tactic]:
+        self.informal_stmt = ""
+        self.informal_proof = ""
+
+    def next_tactic(
+            self,
+            state: GoalState,
+            goal_id: int,
+        ) -> Optional[Tactic]:
         key = (state.state_id, goal_id)
         i = self.goal_tactic_id_map[key]
 
@@ -46,7 +57,13 @@ class LLMAgent(Agent):
             new_state = None
             for ii in range(self.n_trials):
                 print(f"===============trail {str(ii)}============")
-                s = select_tactic.run(server = self.server, state=state, goal_id = goal_id, informal_stmt=informal_stmt,  informal_proof=informal_proof)
+                s = select_tactic.run(
+                    server=self.server,
+                    state=state,
+                    goal_id=goal_id,
+                    informal_stmt=self.informal_stmt,
+                    informal_proof=self.informal_proof,
+                    feedback_turns=self.feedback_turns)
                 tactic, new_state = s.ret_value
                 for m in s.messages():
                     print(m["role"], ":", m["content"])
@@ -78,7 +95,7 @@ class TestSearch(unittest.TestCase):
 
     def test_solve(self):
 
-        server = Server()
+        server = Server(core_options=CORE_OPTIONS)
         agent = LLMAgent(server, use_hammer=False)
         goal_state = server.goal_start("∀ (p q: Prop), p -> p")
         flag = agent.search(server=server, goal_state=goal_state, verbose=True)
@@ -86,7 +103,7 @@ class TestSearch(unittest.TestCase):
         self.assertTrue(flag)
     def test_solve_big(self):
 
-        server = Server()
+        server = Server(core_options=CORE_OPTIONS)
         agent = LLMAgent(server, use_hammer=False)
         goal_state = server.goal_start("∀ (p q: Prop), Or p q -> Or q p")
         flag = agent.search(server=server, goal_state=goal_state, verbose=True)

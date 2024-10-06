@@ -1,7 +1,12 @@
+"""
+Tactic generation functions for the LLM agent
+"""
 from pantograph.server import Server, ServerError, TacticFailure
 from pantograph.expr import Variable, Goal, TacticCalc
-import  unittest
 import sglang as sgl
+from termcolor import colored
+import unittest
+from .options import CORE_OPTIONS
 
 LEAN4_INTRO = '''/-- A sequence `u` of real numbers converges to `l` if `∀ ε > 0, ∃ N, ∀ n ≥ N, |u_n - l| ≤ ε`.
 This condition will be spelled `seq_limit u l`. -/
@@ -78,6 +83,8 @@ example (n : Nat) (h : n = 0) (t : Tuple α n) : Tuple α 0 := by
   exact t
 '''
 
+PREFIX_CURRENT_GOAL = "The current goal: "
+
 @sgl.function
 def multi_turn_question(s, question_1, question_2):
     s += sgl.system("You are a helpful assistant.")
@@ -88,34 +95,43 @@ def multi_turn_question(s, question_1, question_2):
 
 
 @sgl.function
-def select_tactic(s, server, state, goal_id,informal_stmt="",  informal_proof="", feedback_turns = 5):
-    
+def select_tactic(
+        s, server, state, goal_id,
+        informal_stmt: str = "",
+        informal_proof: str = "",
+        feedback_turns: int = 5):
+
     s += sgl.system("You are an expert in Lean. Choose the next ONE tactic to run given the current proof state and goals.")
     s += sgl.user(LEAN4_REWRITE)
-    s += sgl.user("The current proof state: GoalState(state_id=0, goals=[Goal(variables=[], target='∀ (a b: Nat), (b = 2) -> 1 + a + 1 = a + b', name=None, is_conversion=False)])")
-    s += sgl.assistant("```intros a b h```")
-    s += sgl.user("The current proof state: GoalState(state_id=1, goals=[Goal(variables=[Variable(t='Nat', v=None, name='a'), Variable(t='Nat', v=None, name='b'), Variable(t='b = 2', v=None, name='h')], target='1 + a + 1 = a + b', name=None, is_conversion=False)])")
-    s += sgl.assistant('TacticCalc("1 + a + 1 = a + 1 + 1")')
+    #s += sgl.user("The current proof state: GoalState(state_id=0, goals=[Goal(variables=[], target='∀ (a b: Nat), (b = 2) -> 1 + a + 1 = a + b', name=None, is_conversion=False)])")
+    #s += sgl.assistant("```intros a b h```")
+    #s += sgl.user("The current proof state: GoalState(state_id=1, goals=[Goal(variables=[Variable(t='Nat', v=None, name='a'), Variable(t='Nat', v=None, name='b'), Variable(t='b = 2', v=None, name='h')], target='1 + a + 1 = a + b', name=None, is_conversion=False)])")
+    #s += sgl.assistant('TacticCalc("1 + a + 1 = a + 1 + 1")')
+    s += sgl.user(f"{PREFIX_CURRENT_GOAL}p : Prop\n⊢ ∀ (q: Prop), Or p q -> Or q p")
+    s += sgl.assistant('```\nintro q\n```')
+    s += sgl.user(f"{PREFIX_CURRENT_GOAL}a b c : Nat\n⊢ a + b + c = a + c + b")
+    s += sgl.assistant('```\nrw [Nat.add_assoc, Nat.add_comm b, ← Nat.add_assoc]\n```')
     if informal_stmt and informal_proof:
-        s += sgl.user("informal theorem statement: "+ informal_stmt)
+        s += sgl.user("informal theorem statement: " + informal_stmt)
         s += sgl.user("informal proof: " + informal_proof)
-    s += sgl.user("The current proof state: " + str(state) + "")
+    s += sgl.user(f"{PREFIX_CURRENT_GOAL}{state.goals[goal_id]}")
     for i in range(feedback_turns):
         with s.copy() as tmp:
             tmp += sgl.assistant(sgl.gen("tactic", max_tokens=64))
             # print("==tmp===")
             # print(tmp["tactic"])
-            tactic = extract_code_from_llm_output(tmp["tactic"])
-        s += sgl.assistant("```"+tactic+"```")
+            tactic = postprocess_reply(extract_code_from_llm_output(tmp["tactic"]))
+        s += sgl.assistant(f"```\n{tactic}\n```")
         success, new_state = apply_tactic(server, state, goal_id, tactic)
         # print("===execute===")
         # print(success, new_state )
         if not success:
+            print(colored("[Tactic]", "red"), tactic)
             with s.user():
-                s += "This answer got Lean compile error:\n" + str(new_state) + "\n"
+                s += f"This answer got a Lean compile error:\n{new_state}\n"
                 s += "Please try again by taking the Lean compiler feedback."
-            
         else:
+            print(colored("[Tactic]", "green"), tactic)
             return tactic, new_state
     return None, None
 
@@ -127,7 +143,7 @@ def apply_tactic(server, state, goal_id, tactic):
     except TacticFailure as e:
         return False, e
     return True, new_state
-    
+
 def extract_code_from_llm_output(reply):
     i = reply.find("```lean")
     if i != -1:
@@ -143,13 +159,19 @@ def extract_code_from_llm_output(reply):
         return reply
     return reply
 
+def postprocess_reply(reply):
+    reply = reply.strip()
+    if reply and reply[-1] == ",":
+        reply = reply[:-1]
+    return reply
+
 class TestServerSGL(unittest.TestCase):
 
     def test_conv_calc_sgl(self):
         n_trails = 5
         sgl.set_default_backend(sgl.OpenAI("gpt-4"))
 
-        server = Server()
+        server = Server(core_options=CORE_OPTIONS)
         state0 = server.goal_start("∀ (a b: Nat), (b = 2) -> 1 + a + 1 = a + b")
         print("==========state0============")
         print(state0)
@@ -187,7 +209,7 @@ class TestServerSGL(unittest.TestCase):
 
                 print("\n-- new state --\n", state3)
                 break
-                
+
             except ServerError as e:
                 print(f"server error: {e}")
                 continue
@@ -207,14 +229,14 @@ class TestServerSGL(unittest.TestCase):
 
                 print("\n-- new state --\n", state4)
                 break
-                
+
             except ServerError as e:
                 print(f"server error: {e}")
                 continue
 
         state4 = server.goal_tactic(state3, goal_id=0, tactic="rw [Nat.add_assoc]")
         print("==========state4============")
-        print(state4)        
+        print(state4)
         self.assertTrue(state4.is_solved)
 
 
@@ -232,8 +254,7 @@ class TestServerSGL(unittest.TestCase):
 
         print("\n-- answer_1 --\n", state["answer_1"])
 
-   
+
 if __name__ == '__main__':
 
     unittest.main()
-
