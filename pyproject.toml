@@ -1,25 +1,32 @@
 [tool.poetry]
 name = "pantograph"
-version = "0.1.0"
+version = "0.2.19"
 description = "A machine-to-machine interaction system for Lean"
 authors = ["Leni Aniva <v@leni.sh>"]
 license = "GPL-3"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-pexpect = "^4.9.0"
-sglang = "^0.1.16"
+# vllm = "0.4.1"
 numpy = "^1.26.4"
-openai = "^1.31.0"
-tiktoken = "^0.7.0"
+pexpect = "^4.9.0"
+python = "^3.10"
+sglang = "^0.1.16"
+torch = "2.2.1"
 
 [tool.poetry.build]
 generate-setup-file = false
 script = "build.py"
 
 [tool.poetry.group.dev.dependencies]
+# Experiment related dependencies here to not clutter the main project dependencies.
+fire = "0.6.0"
 notebook = "^7.2.1"
+openai = "^1.31.0"
+tenacity = "8.3.0"
+tiktoken = "^0.7.0"
+wandb = "0.17.0"
+termcolor = "^2.4.0"
 
 [build-system]
 requires = ["poetry-core"]

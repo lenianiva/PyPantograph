@@ -18,6 +18,7 @@ This would generate compiled `.olean` files. Then run one of the examples from t
 project root:
 ``` sh
 poetry run examples/aesop.py
+poetry run examples/sketch.py
 poetry run examples/data.py
 ```
 
@@ -25,4 +26,8 @@ Warning: If you make modifications to any Lean files, you must re-run `lake
 build`! Moreover, the version of the Lean used in the example folder (including
 dependencies in `lakefile.lean` and `lean-toolchain`) **must match exactly**
 with the version in `src/`!
+
+* `aesop.py`: Example of how to use the `aesop` tactic
+* `data.py`: Example of loading training data
+* `sketch.py`: Example of loading a sketch
 

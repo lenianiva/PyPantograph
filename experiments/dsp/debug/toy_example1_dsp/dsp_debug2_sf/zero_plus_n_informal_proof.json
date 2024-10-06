@@ -1,0 +1,6 @@
+{
+    "problem": "For any natural number n, 0 + n = n.",
+    "level": "SF foundations level 1",
+    "type": "Algebra",
+    "solution": "Consider some natural number n. We now want to show 0 + n = n. For that we use the definition of addition to get n = n and conclude both sides are equal (by reflexity)." 
+}

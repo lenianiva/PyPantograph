@@ -1,27 +1,20 @@
 # PyPantograph
 
-Python interface to the Pantograph library
+A Machine-to-Machine Interaction System for Lean 4.
 
-## Getting started
-Update submodule
-``` bash
-git submodule update --init
+## Installation
+
+1. Install `poetry`
+2. Clone this repository with submodules:
+```sh
+git clone --recursive-submodules <repo-path>
 ```
-Install dependencies
-```bash
+3. Install `elan` and `lake`: See [Lean Manual](https://docs.lean-lang.org/lean4/doc/setup.html)
+4. Execute
+```sh
+poetry build
 poetry install
 ```
-
-Execute
-```bash
-poetry build
-```
-To run server tests:
-``` bash
-python -m pantograph.server
-python -m pantograph.search
-```
-The tests in `pantograph/server.py` also serve as simple interaction examples
 
 ## Examples
 
@@ -36,12 +29,13 @@ python3 -m pantograph.search_llm
 
 ## Experiments
 
-In `experiments/`, there is an experiment on running a LLM prover on miniF2F
-data. Run with
+In `experiments/`, there are some experiments:
+1. `minif2f/` is an example of executing a SGLANG based prover on the miniF2F dataset
+2. `dsp` is an Lean implementation of Draft-Sketch-Prove
 
-```sh
-python3 experiments/miniF2F_search.py [--dry-run]
-```
+If the experiments don't work, run them in `poetry shell`. The environment
+variable `OPENAI_API_KEY` must be set when running experiments calling the
+OpenAI API.
 
 ## Referencing
 
@@ -53,3 +47,4 @@ python3 experiments/miniF2F_search.py [--dry-run]
 	howpublished = {\url{https://github.com/lenianiva/PyPantograph}}
 }
 ```
+
