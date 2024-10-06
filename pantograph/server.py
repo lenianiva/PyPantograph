@@ -180,12 +180,22 @@ class Server:
 
         with open(file_name, 'rb') as f:
             content = f.read()
-            units = [content[begin:end].decode('utf-8') for begin,end in result['units']]
-
-        invocations = [TacticInvocation.parse(i) for i in result['invocations']]
+            units = [
+                content[unit["bounary"][0]:unit["boundary"][1]].decode('utf-8')
+                for unit in result['units']
+            ]
+            invocations = [
+                invocation
+                for unit in result['units']
+                for invocation in [TacticInvocation.parse(i) for i in unit['invocations']]
+            ]
         return units, invocations
 
-    def load_sorry(self, command: str) -> list[GoalState]:
+    def load_sorry(self, command: str) -> list[GoalState | list[str]]:
+        """
+        Executes the compiler on a Lean file. For each compilation unit, either
+        return the gathered `sorry`s, or a list of messages indicating error.
+        """
         result = self.run('frontend.process', {
             'file': command,
             'invocations': False,
@@ -193,9 +203,17 @@ class Server:
         })
         if "error" in result:
             raise ServerError(result["desc"])
+
+        def parse_unit(unit: dict):
+            state_id = unit.get("goalStateId")
+            if state_id is None:
+                # NOTE: `state_id` maybe 0.
+                # Maybe error has occurred
+                return unit["messages"]
+            state = GoalState.parse_inner(state_id, unit["goals"], self.to_remove_goal_states)
+            return state
         states = [
-            GoalState.parse_inner(state_id, goals, self.to_remove_goal_states)
-            for (state_id, goals) in result['goalStates']
+            parse_unit(unit) for unit in result['units']
         ]
         return states
 
@@ -346,6 +364,8 @@ class TestServer(unittest.TestCase):
     def test_load_sorry(self):
         server = Server()
         state0, = server.load_sorry("example (p: Prop): p → p := sorry")
+        if isinstance(state0, list):
+            print(state0)
         self.assertEqual(state0.goals, [
             Goal(
                 [Variable(name="p", t="Prop")],

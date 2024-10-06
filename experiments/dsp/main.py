@@ -183,7 +183,20 @@ def prove(
     # If this throws index out of bound errors it means the source doesn't contain walled off Lean sections.
     print(colored("Sketch:", "yellow"), fl_sketch)
     lean_code, = [extract_lean_code(sketch)[0] for sketch in fl_sketch]
-    state, = server.load_sorry(lean_code)
+    print(colored("Lean code:", "light_grey"), lean_code)
+    states = server.load_sorry(lean_code)
+
+    if len(states) != 1:
+        print(colored("Model must output one compilation unit", "red"))
+        raise NotImplemented
+
+    state = states[0]
+
+    if isinstance(state, list) and len(state) > 0:
+        print(colored("Sketch failed:", "red"), "\n".join(state))
+        # what should we do?
+        raise NotImplemented
+
     agent = HammerAgent()
     result = agent.search(server, state)
     print(colored(f"Result: {result}", "blue"))
@@ -213,13 +226,16 @@ def full_proof_search_dsp_lean(
         eng: Engine,
         server: Server,
         data: list[Datum],
+        path_output: Path,
     ):
     print(colored(f"DSP on {len(data)} points", "blue", attrs=["bold", "underline"]))
     # -- Proof search by DSP over all eval data
-    for datum in tqdm(data, total=len(data), desc='DSP proof loop per data point in benchmark.'):
-        print("Problem:", colored(datum.id, "cyan"))
+    for i, datum in tqdm(enumerate(data), total=len(data), desc='DSP proof loop per data point in benchmark.'):
+        print(f"Problem {i}:", colored(str(datum), "cyan"))
         result = single_proof_search_dsp_lean(eng, server, datum)
-        print(result)
+        file_name = path_output / f"{i:03}.json"
+        with open(file_name, 'w') as f:
+            json.dump({ 'name': str(datum), 'success': result.success, 'steps': result.steps  }, f)
         #server.gc()
     return
 
@@ -253,9 +269,13 @@ def load_data(args) -> list[Datum]:
 # -- Main
 
 def main(args):
-    import time
+    import time, datetime
     start_time = time.time()
+
+    # Setup paths and data
     data_eval = load_data(args)
+    path_output = Path(args.output)
+    path_output.mkdir(exist_ok=True, parents=True)
 
     # Start server
     project_path, lean_path = get_project_and_lean_path()
@@ -302,9 +322,10 @@ def main(args):
     )
 
     # - Full proof search with DSP
-    full_proof_search_dsp_lean(eng, server, data_eval)
-    msg = f"Time taken: {time.time() - start_time:.2f} seconds, or {(time.time() - start_time) / 60:.2f} minutes, or {(time.time() - start_time) / 3600:.2f} hours.\a"
-    print(colored(msg, "magenta"))
+    full_proof_search_dsp_lean(eng, server, data_eval, path_output)
+
+    dt = datetime.timedelta(seconds=time.time() - start_time)
+    print(colored(f"Time elapsed: {dt}", "magenta"))
 
     # - End run
     # wandb.config.update(config)
@@ -328,6 +349,11 @@ if __name__ == "__main__":
         "--dataset",
         help="Evaluation dataset path",
         default=experiment_dir / 'debug/toy_example1_dsp/dsp_debug5_sf/dsp_debug5_sf_train.json',
+    )
+    parser.add_argument(
+        "--output",
+        help="Result directory",
+        default=experiment_dir / 'result',
     )
     parser.add_argument(
         "--model",
