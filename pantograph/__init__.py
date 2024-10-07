@@ -1,1 +1,1 @@
-from pantograph.server import Server
+from pantograph.server import Server, ServerError
