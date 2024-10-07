@@ -19,7 +19,7 @@ class TacticFailure(Exception):
 class ServerError(Exception):
     pass
 
-DEFAULT_CORE_OPTIONS=["maxHeartbeats=0", "maxRecDepth=10000"]
+DEFAULT_CORE_OPTIONS=["maxHeartbeats=0", "maxRecDepth=100000"]
 
 class Server:
 
@@ -91,7 +91,10 @@ class Server:
             try:
                 return json.loads(line)
             except Exception as e:
-                raise ServerError(f"Cannot decode: {line}") from e
+                self.proc.sendeof()
+                remainder = self.proc.read()
+                self.proc = None
+                raise ServerError(f"Cannot decode: {line}\n{remainder}") from e
         except pexpect.exceptions.TIMEOUT as exc:
             raise exc
 
