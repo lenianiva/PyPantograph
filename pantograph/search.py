@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import time
 from dataclasses import dataclass
 from typing import  Optional
 import collections, unittest
@@ -38,6 +39,8 @@ class SearchState:
 @dataclass(frozen=True)
 class SearchResult:
 
+    n_goals_root: int
+    duration: float
     success: bool
     steps: int
 
@@ -77,9 +80,13 @@ class Agent:
                max_trials_per_goal: int = 5,
                verbose: bool = False) -> SearchResult:
         """
-        Searches using th
+        Executes proof search on this state
         """
+
         assert server.is_automatic(), "Search must be run in automatic mode"
+
+        n_goals_root = len(goal_state.goals)
+        time_start = time.time()
 
         initial_state = SearchState(
             state=goal_state,
@@ -88,9 +95,6 @@ class Agent:
             priorities=[0.0 for _ in goal_state.goals]
         )
         search_stack = [initial_state]
-        """
-        Executes proof search on this state
-        """
         for i_step in range(max_steps):
             assert search_stack, "No states in search stack"
 
@@ -101,7 +105,12 @@ class Agent:
             assert isinstance(search_state, SearchState)
 
             if search_state.is_solved:
-                return SearchResult(success=True, steps=i_step)
+                return SearchResult(
+                    n_goals_root=n_goals_root,
+                    duration=time.time() - time_start,
+                    success=True,
+                    steps=i_step,
+                )
 
             # Find the unsolved goal with the highest priority
             goal_id = search_state.next_goal_id
@@ -124,7 +133,12 @@ class Agent:
                     if verbose:
                         print("Search stack has been exhausted")
                     self.reset()
-                    return SearchResult(success=False, steps=i_step)
+                    return SearchResult(
+                        n_goals_root=n_goals_root,
+                        duration=time.time() - time_start,
+                        success=False,
+                        steps=i_step,
+                    )
                 continue
 
             try:
@@ -156,7 +170,12 @@ class Agent:
             print("Search iteration limit exhausted")
 
         self.reset()
-        return SearchResult(success=False, steps=max_steps)
+        return SearchResult(
+            n_goals_root=n_goals_root,
+            duration=time.time() - time_start,
+            success=False,
+            steps=max_steps,
+        )
 
 
 class DumbAgent(Agent):

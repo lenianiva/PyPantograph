@@ -143,17 +143,21 @@ prompt_sketch_template_lean4_v0 = get_prompt_sketch_template_4_lean_v0()
 
 WALL = "```"
 
+def postprocess_lean(
+        code,
+        placeholder: str = TOKEN_PLACEHOLDER,
+    ):
+    return code.replace("ℕ", "Nat").replace(placeholder, "sorry")
 
 def extract_lean_code(
         sketch: str,
-        placeholder: str = TOKEN_PLACEHOLDER,
         strip_imports: bool = True) -> list[str]:
     lines = sketch.split("\n")
     # find backtick markers ```
     if WALL not in sketch:
         # No walls found. The whole thing must be code
         lines = [line for line in lines if not line.startswith("import ")]
-        return ["\n".join(lines)]
+        return [postprocess_lean("\n".join(lines))]
     lean_codes = []
     curr = []
     is_walled = False
@@ -172,8 +176,7 @@ def extract_lean_code(
             if is_walled_lean:
                 # found wall
                 code = "\n".join(curr) + "\n"
-                code = code.replace("ℕ", "Nat").replace(placeholder, "sorry")
-                lean_codes.append(code)
+                lean_codes.append(postprocess_lean(code))
                 curr = []
             is_walled = False
             is_walled_lean = False
@@ -201,10 +204,11 @@ class TestPrompts(unittest.TestCase):
         self.assertEqual(len(codes), 1)
 
     def test_extract_sketch_no_wall(self):
-        payload = "example : forall (n: Prop), n -> n := sorry"
+        payload = f"example : forall (n: Prop), n -> n := {TOKEN_PLACEHOLDER}"
+        payload1 = f"\nexample : forall (n: Prop), n -> n := sorry"
         sketch = f"import Mathlib\n\n{payload}"
         codes = extract_lean_code(sketch)
-        self.assertEqual(codes, ["\n" + payload])
+        self.assertEqual(codes, [payload1])
 
 if __name__ == '__main__':
     unittest.main()

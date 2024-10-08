@@ -1,4 +1,4 @@
-import sys, os, json, subprocess
+import sys, os, json, subprocess, time, datetime
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Union, Any, Tuple, Optional
@@ -44,6 +44,7 @@ class DatumResult:
     Result from one DSP data point
     """
     name: str
+    duration: float
     success: Optional[bool] = False
     proves: list[Union[SearchResult, SketchParseFailure]] = field(default_factory=list)
 
@@ -106,8 +107,8 @@ def autoformalize_prob(
     """ Autoformalize natural language problem to formal language problem. """
     pass
 
-@retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=2, max=128))
-def draft(
+#@retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=2, max=128))
+def step_draft(
         eng: Engine,
         datum: Datum,
         verbose: bool = False,
@@ -140,8 +141,8 @@ def draft(
     drafts: list[str] = completions
     return drafts
 
-@retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=2, max=128))
-def sketch(
+#@retry(stop=stop_after_attempt(15), wait=wait_exponential(multiplier=2, max=128))
+def step_sketch(
         eng: Engine,
         datum: Datum,
         drafts: list[str],
@@ -181,7 +182,7 @@ def sketch(
     # Return
     return sketches, x_fl_problem
 
-def prove(
+def step_prove(
         eng: Engine,
         server: Server,
         fl_prob: str,
@@ -198,7 +199,7 @@ def prove(
     # If this throws index out of bound errors it means the source doesn't contain walled off Lean sections.
     print(colored("Sketch:", "yellow"), fl_sketch)
     lean_code = "\n".join(extract_lean_code(fl_sketch))
-    print(colored("Lean code:", "light_grey"), lean_code)
+    print(colored("Lean code:", "light_grey", attrs=["bold"]), lean_code)
 
     try:
         states = server.load_sorry(lean_code)
@@ -246,31 +247,37 @@ def single_proof_search_dsp_lean(
         server_func,
         datum: Datum,
     ) -> DatumResult:
+
+    start_time = time.time()
     # -- Draft: [y_nl_pred_draft]_n ~ draft(eng, x_nl_prob, P_draft)
-    y_nl_pred_drafts = draft(eng, datum)
+    y_nl_pred_drafts = step_draft(eng, datum)
 
     # -- Sketch: z_fl_pred_sketch ~ sketch(eng, x_nl_prob, [y_nl_pred_draft]_n, x_fl_prob, P_sketch)
-    z_fl_pred_sketches, x_fl_prob = sketch(eng, datum, y_nl_pred_drafts)
+    z_fl_pred_sketches, x_fl_prob = step_sketch(eng, datum, y_nl_pred_drafts)
 
-    assert len(z_fl_pred_sketches) == eng.sketch_sampling_params.top_p
+    assert len(z_fl_pred_sketches) == eng.sketch_sampling_params.n
 
     server = server_func()
 
     results = []
     success = False
-    for sketch in z_fl_pred_sketches:
+    for i_sketch, sketch in enumerate(z_fl_pred_sketches):
+        if len(z_fl_pred_sketches):
+            print(colored(f"Sketch {1+i_sketch}/{len(z_fl_pred_sketches)}", attrs=["bold", "underline"]))
+
         # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
-        prove_result = prove(eng, server, x_fl_prob, sketch)
+        prove_result = step_prove(eng, server, x_fl_prob, sketch)
         results.append(prove_result)
         if isinstance(prove_result, SearchResult) and prove_result.success:
             success = True
             break
-
+    duration = time.time() - start_time
 
     return DatumResult(
         name=str(datum),
         success=success,
         proves=results,
+        duration=duration,
     )
 
 def full_proof_search_dsp_lean(
@@ -279,28 +286,27 @@ def full_proof_search_dsp_lean(
         data: list[Datum],
         path_output: Path,
     ):
-    print(colored(f"DSP on {len(data)} points", "blue", attrs=["bold", "underline"]))
     n_success = 0
     n_tried = 0
     # -- Proof search by DSP over all eval data
     for i, datum in tqdm(enumerate(data), total=len(data), desc='DSP proof loop per data point in benchmark.'):
-        file_name = path_output / f"{i:03}.json"
+        output_path = path_output / f"{i:03}.json"
         key = str(datum)
         # Detect if file exists
-        if file_name.is_file():
-            obj = json.load(open(file_name, "r"))
+        if output_path.is_file():
+            obj = json.load(open(output_path, "r"))
             if obj['name'] != key:
                 print(colored(f"Existing datum name {obj['name']} does not match dataset {key}. The output directory may be wrong"))
                 return
 
-            print(f"Skipped {i}:", colored(key, "green"))
+            print(f"Skipped {output_path.name}:", colored(key, "green"))
             continue
 
         n_tried += 1
-        print(f"Problem {i}:", colored(key, "cyan"))
+        print(f"Problem {output_path.name}:", colored(key, "cyan"))
 
         result = single_proof_search_dsp_lean(eng, server_func, datum)
-        with open(file_name, 'w') as f:
+        with open(output_path, 'w') as f:
             json.dump(asdict(result), f)
         if result.success:
             n_success += 1
@@ -337,7 +343,6 @@ def load_data(args) -> list[Datum]:
 # -- Main
 
 def main(args):
-    import time, datetime
     start_time = time.time()
 
     # Setup paths and data
@@ -369,7 +374,7 @@ def main(args):
     # - Run DSP for Lean
     api_key = os.environ['OPENAI_API_KEY']
     draft_sampling_params = SamplingParams(
-        n=args.n_samples,
+        n=1, #args.n_samples,
         max_tokens=args.max_tokens,
         top_p=args.top_p,
         temperature=args.temperature,
@@ -390,6 +395,9 @@ def main(args):
         sketch_sampling_params=sketch_sampling_params,
     )
 
+    print(colored(f"DSP on {len(data_eval)} points", "blue", attrs=["bold", "underline"]))
+    print(f"Draft={draft_sampling_params}")
+    print(f"Sketch={sketch_sampling_params}")
     # - Full proof search with DSP
     full_proof_search_dsp_lean(eng, server_func, data_eval, path_output)
 
@@ -457,11 +465,31 @@ if __name__ == "__main__":
     )
     parser.add_argument("--start", default=0)
     parser.add_argument("--end", default=sys.maxsize)
-    parser.add_argument("--batchsize", default=10, help="putnam has 348")
-    parser.add_argument("--n-samples", default=1, help="num seqs to return for given prompt")
-    parser.add_argument("--max-tokens", default=2048, help="Maximum number of tokens in one sample")
-    parser.add_argument("--top-p", default=0.95, help="Sampling top p")
-    parser.add_argument("--temperature", default=0.8, help="Sampling temperature")
+    parser.add_argument(
+        "--batchsize",
+        default=10, type=int,
+        help="putnam has 348",
+    )
+    parser.add_argument(
+        "--n-samples",
+        default=1, type=int,
+        help="Number of sketch samples for a draft",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        default=2048, type=int,
+        help="Maximum number of tokens in one sample",
+    )
+    parser.add_argument(
+        "--top-p",
+        default=0.95, type=float,
+        help="Sampling top p via nucleus sampling",
+    )
+    parser.add_argument(
+        "--temperature",
+        default=0.8, type=float,
+        help="Sampling temperature",
+    )
     parser.add_argument("--verbose", action='store_true')
     args = parser.parse_args()
 
