@@ -13,7 +13,7 @@ lake build
 ```
 Then run `main.py`
 ``` sh
-python3 experiments/dsp/main.py -h
+python3 main.py -h
 ```
 
 The main command for running DSP is `eval`. Due to the multitude of data format
@@ -21,7 +21,19 @@ out there, use the `--format` flag to specify the data format. For example,
 running DSP on minif2f is:
 
 ``` sh
-python3 experiments/dsp/main.py eval --dataset ../minif2f/valid.jsonl --format minif2f
+python3 main.py eval \
+    --dataset ../minif2f/valid.jsonl \
+    --format minif2f \
+    --output results-minif2f-valid
+```
+
+Then, use `plot.py` to generate the plots
+
+``` sh
+python3 plot.py \
+    --result results-minif2f-{valid,test} \
+    --names valid test \
+    --plot-output output-plot
 ```
 
 ## Related work
