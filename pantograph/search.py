@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import  Optional
 import collections, unittest
 
-from pantograph.server import Server, TacticFailure
+from pantograph.server import Server, TacticFailure, ServerError
 from pantograph.expr import Expr, Tactic, GoalState
 
 
@@ -165,6 +165,8 @@ class Agent:
                     print(f"Tactic failed: {t}")
                 self.tactic_feedback = str(t)
                 # try the next tactic. this one failed
+            except ServerError as e:
+                raise RuntimeError(f"While executing tactic: {tactic}") from e
 
         if verbose:
             print("Search iteration limit exhausted")

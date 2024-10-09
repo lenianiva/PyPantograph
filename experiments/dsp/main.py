@@ -6,7 +6,7 @@ from tqdm import tqdm
 from openai import OpenAI
 import wandb
 from tenacity import retry, stop_after_attempt, wait_exponential
-from pantograph import Server, ServerError
+from pantograph import Server, ServerError, DEFAULT_CORE_OPTIONS
 from pantograph.search import SearchResult
 from termcolor import colored
 
@@ -37,6 +37,11 @@ class SamplingParams:
 class SketchParseFailure:
     error: str
     sketch: str
+@dataclass(frozen=True)
+class SearchFailure:
+    error: str
+    sketch: str
+    message: str
 
 @dataclass(frozen=True)
 class DatumResult:
@@ -44,7 +49,8 @@ class DatumResult:
     Result from one DSP data point
     """
     name: str
-    duration: float
+    error: Optional[str] = None
+    duration: float = -1.0
     success: Optional[bool] = False
     proves: list[Union[SearchResult, SketchParseFailure]] = field(default_factory=list)
 
@@ -187,7 +193,7 @@ def step_prove(
         server: Server,
         fl_prob: str,
         fl_sketch: str,
-    ) -> Union[SketchParseFailure, SearchResult]:
+    ) -> Union[SketchParseFailure, SearchFailure, SearchResult]:
     """
 
     Complete formal sketch and check if it proves the theorem.
@@ -230,15 +236,22 @@ def step_prove(
         )
 
     agent = HammerAgent()
-    result = agent.search(
-        server,
-        state,
-        max_steps=1000,
-        max_trials_per_goal=len(agent.tactics) + 1,
-    )
-    print(colored(f"Result: {result}", "blue"))
+    try:
+        result = agent.search(
+            server,
+            state,
+            max_steps=1000,
+            max_trials_per_goal=len(agent.tactics) + 1,
+        )
+        print(colored(f"Result: {result}", "blue"))
 
-    return result
+        return result
+    except Exception as e:
+        return SearchFailure(
+            error=f"Server threw exception",
+            sketch=fl_sketch,
+            message=str(e),
+        )
 
 # -- DSP for Lean
 
@@ -257,7 +270,6 @@ def single_proof_search_dsp_lean(
 
     assert len(z_fl_pred_sketches) == eng.sketch_sampling_params.n
 
-    server = server_func()
 
     results = []
     success = False
@@ -265,6 +277,14 @@ def single_proof_search_dsp_lean(
         if len(z_fl_pred_sketches):
             print(colored(f"Sketch {1+i_sketch}/{len(z_fl_pred_sketches)}", attrs=["bold", "underline"]))
 
+        try:
+            server = server_func()
+        except Exception as e:
+            print(colored("Failed to create server: {e}", "red"))
+            return DatumResult(
+                name=str(datum),
+                error=str(e),
+            )
         # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
         prove_result = step_prove(eng, server, x_fl_prob, sketch)
         results.append(prove_result)
@@ -357,6 +377,7 @@ def main(args):
             imports=["Mathlib", "Aesop"],
             project_path=project_path,
             lean_path=lean_path,
+            core_options=DEFAULT_CORE_OPTIONS,
         )
 
     # - Start wandb run
@@ -420,7 +441,7 @@ def stat(args):
         # Detect if file exists
         obj = json.load(open(file_name, "r"))
         if obj['name'] != key:
-            print(colored(f"Existing datum name {obj['name']} does not match dataset {key}. The output directory may be wrong"))
+            print(colored(f"Existing datum name {obj['name']} does not match dataset {key}. The output directory may be wrong", "red"))
             return
 
         n_tried += 1
