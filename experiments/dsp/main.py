@@ -1,6 +1,6 @@
 import sys, os, json, subprocess, time, datetime
-from dataclasses import dataclass, asdict, field
 from pathlib import Path
+from dataclasses import asdict
 from typing import Union, Any, Tuple, Optional
 from tqdm import tqdm
 from openai import OpenAI
@@ -21,38 +21,16 @@ from solve.prompts import (
     get_prompt_sketch_template_4_lean_v0,
 )
 from solve.prove import HammerAgent
-from solve.data import Datum
+from solve.data import (
+    Datum,
+    SamplingParams,
+    SketchParseFailure,
+    SearchFailure,
+    DatumResult,
+)
 
 # prompt_draft_template_lean4_v0 = "Draft an informal solution similar to the one below. The informal solution will be used to sketch a formal proof in the Lean 4 Proof Assistant. Here are some examples of informal problem solutions pairs:\n\nInformal:\n(*### Problem\n\nProve that for any natural number n, n + 0 = n.\n\n### Solution\n\nConsider any natural number n. From properties of addition, adding zero does not change its values. Thus, n + 0 = n.*)\n\nInformal:\n(*### Problem\n\nProve that for any natural number n, n + (m + 1) = (n + m) + 1.\n\n### Solution\n\nConsider any natural numbers n and m. From properties of addition, adding 1 to the sum of n and m is the same as first adding m to n and then adding 1. Thus, n + (m + 1) = (n + m) + 1.*)\n\nInformal:\n(*### Problem\n\nProve that for any natural number n and m, n + m = m + n.\n\n### Solution\n\nConsider any natural numbers n and m. We will do induction on n. Base case: 0 + m = m + 0 by properties of addition. Inductive step, we have n + m = m + n. Then (n + 1) + m = (n + m) + 1 = (m + n) + 1 = m + (n + 1). Thus, by induction, n + m = m + n, qed.*)\n\nInformal: \n(*### Problem\n\n{nl_problem}\n\n### Solution\n"
 
-@dataclass
-class SamplingParams:
-    n: int
-    max_tokens: int
-    top_p: int
-    temperature: float
-    stop: str
-
-@dataclass(frozen=True)
-class SketchParseFailure:
-    error: str
-    sketch: str
-@dataclass(frozen=True)
-class SearchFailure:
-    error: str
-    sketch: str
-    message: str
-
-@dataclass(frozen=True)
-class DatumResult:
-    """
-    Result from one DSP data point
-    """
-    name: str
-    error: Optional[str] = None
-    duration: float = -1.0
-    success: Optional[bool] = False
-    proves: list[Union[SearchResult, SketchParseFailure]] = field(default_factory=list)
 
 class Engine:
     def __init__(self):
@@ -430,7 +408,7 @@ def main(args):
     # print(f"{wandb.config=}")
     # run.finish()
 
-def stat(args):
+def check(args):
     path_output = Path(args.output)
     data = load_data(args)
     n_success = 0
@@ -449,6 +427,7 @@ def stat(args):
             n_success += 1
     print(f"Proved {n_success}/{n_tried} problems")
 
+
 if __name__ == "__main__":
     import argparse
 
@@ -460,7 +439,7 @@ if __name__ == "__main__":
     parser.add_argument(
         'mode',
         help="Function",
-        choices=['eval', 'prompts', 'stat'],
+        choices=['prompts', 'eval', 'check'],
     )
     parser.add_argument(
         "--dataset",
@@ -514,12 +493,12 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", action='store_true')
     args = parser.parse_args()
 
-    if args.mode == "eval":
-        main(args)
-    elif args.mode == 'stat':
-        stat(args)
-    elif args.mode == "prompts":
+    if args.mode == "prompts":
         prompt = get_prompt_sketch_template_4_lean_v0(verbose=args.verbose)
         print(prompt)
+    elif args.mode == "eval":
+        main(args)
+    elif args.mode == 'check':
+        check(args)
     else:
         raise ValueError(f"Unknown mode: {args.mode}")
