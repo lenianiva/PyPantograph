@@ -27,6 +27,9 @@ torch = "2.2.1"
 wandb = "0.17.0"
 termcolor = "^2.4.0"
 # vllm = "0.4.1"
+matplotlib = "^3.9.2"
+seaborn = "^0.13.2"
+pandas = "^2.2.3"
 
 [build-system]
 requires = ["poetry-core"]

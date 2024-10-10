@@ -19,7 +19,7 @@ class TacticFailure(Exception):
 class ServerError(Exception):
     pass
 
-DEFAULT_CORE_OPTIONS=["maxHeartbeats=0", "maxRecDepth=10000"]
+DEFAULT_CORE_OPTIONS=["maxHeartbeats=0", "maxRecDepth=100000"]
 
 class Server:
 
@@ -31,7 +31,7 @@ class Server:
                  # Set `{ "automaticMode" : False }` to handle resumption by yourself.
                  options={},
                  core_options=DEFAULT_CORE_OPTIONS,
-                 timeout=60,
+                 timeout=120,
                  maxread=1000000):
         """
         timeout: Amount of time to wait for execution
@@ -72,8 +72,11 @@ class Server:
             env=env,
         )
         self.proc.setecho(False) # Do not send any command before this.
-        ready = self.proc.readline() # Reads the "ready."
-        assert ready == "ready.\r\n", f"Server failed to emit ready signal: {ready}; Maybe the project needs to be rebuilt"
+        try:
+            ready = self.proc.readline() # Reads the "ready."
+            assert ready.rstrip() == "ready.", f"Server failed to emit ready signal: {ready}; Maybe the project needs to be rebuilt"
+        except pexpect.exceptions.TIMEOUT as exc:
+            raise RuntimeError("Server failed to emit ready signal in time") from exc
 
         if self.options:
             self.run("options.set", self.options)
@@ -84,16 +87,25 @@ class Server:
         """
         Runs a raw JSON command. Preferably use one of the commands below.
         """
+        assert self.proc
         s = json.dumps(payload)
         self.proc.sendline(f"{cmd} {s}")
         try:
             line = self.proc.readline()
             try:
-                return json.loads(line)
+                obj = json.loads(line)
+                if obj.get("error") == "io":
+                    # The server is dead
+                    self.proc = None
+                return obj
             except Exception as e:
-                raise ServerError(f"Cannot decode: {line}") from e
+                self.proc.sendeof()
+                remainder = self.proc.read()
+                self.proc = None
+                raise RuntimeError(f"Cannot decode: {line}\n{remainder}") from e
         except pexpect.exceptions.TIMEOUT as exc:
-            raise exc
+            self.proc = None
+            return {"error": "timeout", "message": str(exc)}
 
     def gc(self):
         """

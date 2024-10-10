@@ -28,3 +28,6 @@ class HammerAgent(Agent):
 
         self.goal_tactic_id_map[key] = i + 1
         return self.tactics[i]
+
+    def reset(self):
+        self.goal_tactic_id_map = collections.defaultdict(lambda : 0)

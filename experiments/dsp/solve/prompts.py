@@ -143,13 +143,21 @@ prompt_sketch_template_lean4_v0 = get_prompt_sketch_template_4_lean_v0()
 
 WALL = "```"
 
+def postprocess_lean(
+        code,
+        placeholder: str = TOKEN_PLACEHOLDER,
+    ):
+    return code.replace("ℕ", "Nat").replace(placeholder, "sorry")
 
 def extract_lean_code(
         sketch: str,
-        placeholder: str = TOKEN_PLACEHOLDER,
         strip_imports: bool = True) -> list[str]:
     lines = sketch.split("\n")
     # find backtick markers ```
+    if WALL not in sketch:
+        # No walls found. The whole thing must be code
+        lines = [line for line in lines if not line.startswith("import ")]
+        return [postprocess_lean("\n".join(lines))]
     lean_codes = []
     curr = []
     is_walled = False
@@ -168,8 +176,7 @@ def extract_lean_code(
             if is_walled_lean:
                 # found wall
                 code = "\n".join(curr) + "\n"
-                code = code.replace("ℕ", "Nat").replace(placeholder, "sorry")
-                lean_codes.append(code)
+                lean_codes.append(postprocess_lean(code))
                 curr = []
             is_walled = False
             is_walled_lean = False
@@ -195,6 +202,13 @@ class TestPrompts(unittest.TestCase):
         sketch = "To solve the problem formally in Lean 4, we will sketch the proof by breaking down the steps of the informal solution, leveraging Lean 4 tactics and possibly automated theorem proving. Here's how the formal sketch might look:\n\n```lean\nimport Mathlib.Data.Complex.Basic\nimport Aesop\n\n-- Define the complex number z\ndef z : ℂ := (1 + Complex.i) / Real.sqrt 2\n\ntheorem complex_problem_solution : \n  (∑ i in finset.range 12, z ^ (i + 1) ^ 2) * \n  (∑ i in finset.range 12, z ^ -((i + 1) ^ 2)) = 36 := by\n  -- We first compute z as a complex number with a modulus of 1.\n  -- Thus, powers of z represent rotations in the complex plane.\n  have h_mod_z : Complex.abs z = 1 := <TODO_PROOF_OR_HAMMER>\n  -- Recognize that each term z^(k^2) and its reciprocal are conjugates due to modulus 1.\n  have h_conjugates : ∀ k : ℕ, z^(k^2) * (z^(-k^2)) = 1 := <TODO_PROOF_OR_HAMMER>\n  -- The product (z^(1^2) + z^(2^2) + ... + z^(12^2)) * (z^(-1^2) + z^(-2^2) + ... + z^(-12^2))\n  -- simplifies as a result of this conjugate pair property.\n  have h_sum_conjugates : ∑ i in finset.range 12, z ^ (i + 1) ^ 2 = 0 := <TODO_PROOF_OR_HAMMER>\n  have h_sum_reciprocals : ∑ i in finset.range 12, z ^ -((i + 1) ^ 2) = 0 := <TODO_PROOF_OR_HAMMER>\n  -- Combine all the contributions, where non-zero terms contribute to the total sum\n  -- to ensure the final product is 36 based on the angle and distribution of terms.\n  have h_final_sum_product : (∑ i in finset.range 12, z ^ (i + 1) ^ 2) *\n                             (∑ i in finset.range 12, z ^ -((i + 1) ^ 2)) = 36 := <TODO_PROOF_OR_HAMMER>\n  -- Conclude the proof with the calculated product.\n  exact h_final_sum_product\n```\n\nIn this sketch:\n- We define \\( z \\) as the complex number \\(\\frac{1+i}{\\sqrt{2}}\\).\n- We use properties of complex numbers with modulus 1, recognizing rotational symmetry and conjugate pair relations.\n- We use automated tactics (`<TODO_PROOF_OR_HAMMER>`) to handle calculations involving sums, products, and properties of the complex exponentials.\n- Finally, we show that the structure of these complex exponentials simplifies the product to yield the desired result of 36."
         codes = extract_lean_code(sketch)
         self.assertEqual(len(codes), 1)
+
+    def test_extract_sketch_no_wall(self):
+        payload = f"example : forall (n: Prop), n -> n := {TOKEN_PLACEHOLDER}"
+        payload1 = f"\nexample : forall (n: Prop), n -> n := sorry"
+        sketch = f"import Mathlib\n\n{payload}"
+        codes = extract_lean_code(sketch)
+        self.assertEqual(codes, [payload1])
 
 if __name__ == '__main__':
     unittest.main()
