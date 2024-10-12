@@ -58,23 +58,27 @@ class LLMAgent(Agent):
             new_state = None
             for ii in range(self.n_trials):
                 print(f"===============trail {str(ii)}============")
-                s = select_tactic.run(
-                    server=self.server,
-                    state=state,
-                    goal_id=goal_id,
-                    informal_stmt=self.informal_stmt,
-                    informal_proof=self.informal_proof,
-                    feedback_turns=self.feedback_turns)
-                tactic, new_state = s.ret_value
-                for m in s.messages():
-                    print(m["role"], ":", m["content"])
+                try:
+                    s = select_tactic.run(
+                        server=self.server,
+                        state=state,
+                        goal_id=goal_id,
+                        informal_stmt=self.informal_stmt,
+                        informal_proof=self.informal_proof,
+                        feedback_turns=self.feedback_turns)
+                    tactic, new_state = s.ret_value
+                    for m in s.messages():
+                        print(m["role"], ":", m["content"])
 
-                print("\n-- new state --\n", new_state)
-                if tactic:
-                    if not isinstance(tactic, Tactic):
-                        print(colored("[Tactic] Failed:", "red"), tactic)
-                        return None
-                    return tactic
+                    print("\n-- new state --\n", new_state)
+                    if tactic:
+                        if not isinstance(tactic, Tactic):
+                            print(colored("[Tactic] Failed:", "red"), tactic)
+                            return None
+                        return tactic
+                except Exception as e:
+                    print(colored(str(e), "red"))
+                    return None
             return None
         else:
             self.goal_tactic_id_map[key] = i + 1
