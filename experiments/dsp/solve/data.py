@@ -1,6 +1,6 @@
-import json
 from typing import Union, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pantograph.search import SearchResult
 
 @dataclass
 class Datum:
@@ -68,3 +68,67 @@ class Datum:
             return Datum.load_minif2f(obj)
         else:
             raise ValueError(f"Invalid data format {data_format}")
+
+
+@dataclass
+class SamplingParams:
+    n: int
+    max_tokens: int
+    top_p: int
+    temperature: float
+    stop: str
+
+@dataclass(frozen=True)
+class SketchParseFailure:
+    error: str
+    sketch: str
+@dataclass(frozen=True)
+class SearchFailure:
+    error: str
+    sketch: str
+    message: str
+
+@dataclass(frozen=True)
+class DatumResult:
+    """
+    Result from one DSP data point
+    """
+    name: str
+    error: Optional[str] = None
+    duration: float = -1.0
+    success: Optional[bool] = False
+    proves: list[Union[SearchResult, SearchFailure, SketchParseFailure]] = field(default_factory=list)
+
+    @staticmethod
+    def parse_result(obj: dict):
+        if "message" in obj:
+            return SearchFailure(**obj)
+
+        if "error" in obj:
+            return SketchParseFailure(**obj)
+
+        return SearchResult(**obj)
+
+    @staticmethod
+    def parse(obj: dict):
+        return DatumResult(
+            name=obj['name'],
+            error=obj.get('error'),
+            duration=obj.get('duration'),
+            success=obj['success'],
+            proves=[DatumResult.parse_result(o) for o in obj['proves']]
+        )
+
+    @property
+    def hammer_invocations(self) -> Optional[float]:
+        """
+        Average number of hammer invocations required
+        """
+        li = [
+            sr.n_goals_root
+            for sr in self.proves
+            if isinstance(sr, SearchResult)
+        ]
+        if not li:
+            return None
+        return sum(li)
