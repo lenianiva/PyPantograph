@@ -91,10 +91,39 @@ class GoalState:
 
 @dataclass(frozen=True)
 class TacticHave:
+    """
+    The `have` tactic, equivalent to
+    ```lean
+    have {binder_name} : {branch} := ...
+    ```
+    """
+    branch: str
+    binder_name: Optional[str] = None
+@dataclass(frozen=True)
+class TacticLet:
+    """
+    The `have` tactic, equivalent to
+    ```lean
+    let {binder_name} : {branch} := ...
+    ```
+    """
     branch: str
     binder_name: Optional[str] = None
 @dataclass(frozen=True)
 class TacticCalc:
+    """
+    The `calc` tactic, equivalent to
+    ```lean
+    calc {step} := ...
+    ```
+    You can use `_` in the step.
+    """
     step: str
+@dataclass(frozen=True)
+class TacticExpr:
+    """
+    Assigns an expression to the current goal
+    """
+    expr: str
 
-Tactic = Union[str, TacticHave, TacticCalc]
+Tactic = Union[str, TacticHave, TacticLet, TacticCalc, TacticExpr]
