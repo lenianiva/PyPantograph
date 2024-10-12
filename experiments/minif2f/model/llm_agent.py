@@ -1,5 +1,6 @@
 from typing import Optional
 import collections, unittest
+from termcolor import colored
 from pantograph.search import Agent
 from pantograph.server import Server, TacticFailure, ServerError
 from pantograph.expr import Expr, Tactic, GoalState
@@ -70,6 +71,9 @@ class LLMAgent(Agent):
 
                 print("\n-- new state --\n", new_state)
                 if tactic:
+                    if not isinstance(tactic, Tactic):
+                        print(colored("[Tactic] Failed:", "red"), tactic)
+                        return None
                     return tactic
             return None
         else:
