@@ -5,8 +5,18 @@ interface.
 import json, pexpect, unittest, os
 from typing import Union
 from pathlib import Path
-from pantograph.expr import parse_expr, Expr, Variable, Goal, GoalState, \
-    Tactic, TacticHave, TacticCalc
+from pantograph.expr import (
+    parse_expr,
+    Expr,
+    Variable,
+    Goal,
+    GoalState,
+    Tactic,
+    TacticHave,
+    TacticLet,
+    TacticCalc,
+    TacticExpr,
+)
 from pantograph.compiler import TacticInvocation
 
 def _get_proc_cwd():
@@ -145,6 +155,12 @@ class Server:
             args["have"] = tactic.branch
             if tactic.binder_name:
                 args["binderName"] = tactic.binder_name
+        elif isinstance(tactic, TacticLet):
+            args["let"] = tactic.branch
+            if tactic.binder_name:
+                args["binderName"] = tactic.binder_name
+        elif isinstance(tactic, TacticExpr):
+            args["expr"] = tactic.expr
         elif isinstance(tactic, TacticCalc):
             args["calc"] = tactic.step
         else:
@@ -336,6 +352,23 @@ class TestServer(unittest.TestCase):
             ),
             Goal(
                 variables=[Variable(name="h", t="2 = 1 + 1")],
+                target="1 + 1 = 2",
+            ),
+        ])
+    def test_let(self):
+        server = Server()
+        state0 = server.goal_start("1 + 1 = 2")
+        state1 = server.goal_tactic(
+            state0, goal_id=0,
+            tactic=TacticLet(branch="2 = 1 + 1", binder_name="h"))
+        self.assertEqual(state1.goals, [
+            Goal(
+                variables=[],
+                name="h",
+                target="2 = 1 + 1",
+            ),
+            Goal(
+                variables=[Variable(name="h", t="2 = 1 + 1", v="?h")],
                 target="1 + 1 = 2",
             ),
         ])
