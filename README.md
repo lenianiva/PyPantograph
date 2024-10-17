@@ -7,7 +7,7 @@ A Machine-to-Machine Interaction System for Lean 4.
 1. Install `poetry`
 2. Clone this repository with submodules:
 ```sh
-git clone --recursive-submodules <repo-path>
+git clone --recurse-submodules <repo-path>
 ```
 3. Install `elan` and `lake`: See [Lean Manual](https://docs.lean-lang.org/lean4/doc/setup.html)
 4. Execute
