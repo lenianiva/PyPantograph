@@ -23,20 +23,23 @@ jobs:
       with:
         python-version: 3.11
 
-    - name: Install dependencies
-      run: |
-        pip install poetry
-        poetry install --only doc
-
-    - name: install elan
+    - name: Install elan
       run: |
         set -o pipefail
         curl -sSfL https://github.com/leanprover/elan/releases/download/v3.1.1/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
         ./elan-init -y --default-toolchain none
         echo "$HOME/.elan/bin" >> "${GITHUB_PATH}"
 
-    # Build the book
-    - name: Build the book
+    - name: Print lean and lake versions
+      run: |
+        lake --version
+
+    - name: Install poetry
+      run: |
+        pip install poetry
+        poetry install --only doc
+
+    - name: Build documentations
       run: |
         poetry run jupyter-book build docs
 
