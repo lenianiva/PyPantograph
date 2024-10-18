@@ -3,8 +3,10 @@ root: intro
 parts:
 - caption: Features
   chapters:
+  - file: setup
   - file: goal
   - file: proof_search
+  - file: drafting
 - caption: API Documentation
   chapters:
   - file: api-server
