@@ -1,0 +1,11 @@
+format: jb-book
+root: intro
+parts:
+- caption: Features
+  chapters:
+  - file: goal
+  - file: proof_search
+- caption: API Documentation
+  chapters:
+  - file: api-server
+  - file: api-search
