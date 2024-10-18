@@ -23,6 +23,10 @@ jobs:
       with:
         python-version: 3.11
 
+    - name: Install dependencies
+      run: |
+        pip install jupyter-book
+
     # Build the book
     - name: Build the book
       run: |
