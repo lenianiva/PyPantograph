@@ -25,12 +25,13 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install jupyter-book
+        pip install poetry
+        poetry install --only doc
 
     # Build the book
     - name: Build the book
       run: |
-        jupyter-book build docs
+        poetry run jupyter-book build docs
 
     # Upload the book's HTML as an artifact
     - name: Upload artifact
