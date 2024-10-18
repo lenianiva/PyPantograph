@@ -68,3 +68,4 @@ sphinx:
 
   extra_extensions:
     - sphinx.ext.intersphinx
+    - sphinx.ext.autodoc

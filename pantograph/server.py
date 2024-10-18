@@ -31,7 +31,11 @@ class ServerError(Exception):
 
 DEFAULT_CORE_OPTIONS=["maxHeartbeats=0", "maxRecDepth=100000"]
 
+
 class Server:
+    """
+    Main interaction instance with Pantograph
+    """
 
     def __init__(self,
                  imports=["Init"],
@@ -222,7 +226,7 @@ class Server:
     def load_sorry(self, command: str) -> list[GoalState | list[str]]:
         """
         Executes the compiler on a Lean file. For each compilation unit, either
-        return the gathered `sorry`s, or a list of messages indicating error.
+        return the gathered `sorry` s, or a list of messages indicating error.
         """
         result = self.run('frontend.process', {
             'file': command,
