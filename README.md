@@ -7,7 +7,7 @@ A Machine-to-Machine Interaction System for Lean 4.
 1. Install `poetry`
 2. Clone this repository with submodules:
 ```sh
-git clone --recursive-submodules <repo-path>
+git clone --recurse-submodules <repo-path>
 ```
 3. Install `elan` and `lake`: See [Lean Manual](https://docs.lean-lang.org/lean4/doc/setup.html)
 4. Execute
@@ -30,24 +30,17 @@ python3 -m http.server -d .
 
 ## Examples
 
-For API interaction examples, see `examples/README.md`
-
-An agent based on the `sglang` library is provided in
-`pantograph/search_llm.py`. To use this agent, set the environment variable
-`OPENAI_API_KEY`, and run
-```bash
-python3 -m pantograph.search_llm
-```
+For API interaction examples, see `examples/README.md`. The examples directory
+also contains a comprehensive Jupyter notebook.
 
 ## Experiments
 
 In `experiments/`, there are some experiments:
-1. `minif2f/` is an example of executing a SGLANG based prover on the miniF2F dataset
+1. `minif2f` is an example of executing a `sglang` based prover on the miniF2F dataset
 2. `dsp` is an Lean implementation of Draft-Sketch-Prove
 
-If the experiments don't work, run them in `poetry shell`. The environment
-variable `OPENAI_API_KEY` must be set when running experiments calling the
-OpenAI API.
+The experiments should be run in `poetry shell`. The environment variable
+`OPENAI_API_KEY` must be set when running experiments calling the OpenAI API.
 
 ## Referencing
 
