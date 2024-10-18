@@ -16,6 +16,18 @@ poetry build
 poetry install
 ```
 
+## Documentation
+
+Build the documentations by
+```sh
+jupyter-book build docs
+```
+Then serve
+```sh
+cd docs/_build/html
+python3 -m http.server -d .
+```
+
 ## Examples
 
 For API interaction examples, see `examples/README.md`

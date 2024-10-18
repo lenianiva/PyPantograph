@@ -1,4 +1,4 @@
-# Search
+# Proof Search
 
 About search ...
 

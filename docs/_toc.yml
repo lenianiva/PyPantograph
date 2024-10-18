@@ -1,6 +1,7 @@
 format: jb-book
 root: intro
 parts:
-- caption: Basic examples 🪄
+- caption: Features
   chapters:
-  - file: search
+  - file: goal
+  - file: proof_search
