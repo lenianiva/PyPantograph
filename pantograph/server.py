@@ -100,6 +100,8 @@ class Server:
     def run(self, cmd, payload):
         """
         Runs a raw JSON command. Preferably use one of the commands below.
+
+        :meta private:
         """
         assert self.proc
         s = json.dumps(payload)
@@ -123,9 +125,7 @@ class Server:
 
     def gc(self):
         """
-        Garbage collect deleted goal states.
-
-        Must be called periodically.
+        Garbage collect deleted goal states to free up memory.
         """
         if not self.to_remove_goal_states:
             return
@@ -145,6 +145,9 @@ class Server:
         return parse_expr(result["type"])
 
     def goal_start(self, expr: Expr) -> GoalState:
+        """
+        Create a goal state with one root goal, whose target is `expr`
+        """
         result = self.run('goal.start', {"expr": str(expr)})
         if "error" in result:
             print(f"Cannot start goal: {expr}")
@@ -152,6 +155,9 @@ class Server:
         return GoalState(state_id=result["stateId"], goals=[Goal.sentence(expr)], _sentinel=self.to_remove_goal_states)
 
     def goal_tactic(self, state: GoalState, goal_id: int, tactic: Tactic) -> GoalState:
+        """
+        Execute a tactic on `goal_id` of `state`
+        """
         args = {"stateId": state.state_id, "goalId": goal_id}
         if isinstance(tactic, str):
             args["tactic"] = tactic

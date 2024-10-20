@@ -11,3 +11,5 @@ parts:
   chapters:
   - file: api-server
   - file: api-search
+  - file: api-expr
+  - file: api-data

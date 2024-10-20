@@ -2,11 +2,14 @@
 Data structuers for expressions and goals
 """
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Optional, TypeAlias
 
-Expr = str
+Expr: TypeAlias = str
 
 def parse_expr(payload: dict) -> Expr:
+    """
+    :meta private:
+    """
     return payload["pp"]
 
 @dataclass(frozen=True)
@@ -25,6 +28,9 @@ class Variable:
         return Variable(t, v, name)
 
     def __str__(self):
+        """
+        :meta public:
+        """
         result = self.name if self.name else "_"
         result += f" : {self.t}"
         if self.v:
@@ -41,6 +47,9 @@ class Goal:
 
     @staticmethod
     def sentence(target: Expr):
+        """
+        :meta public:
+        """
         return Goal(variables=[], target=target)
 
     @staticmethod
@@ -56,6 +65,9 @@ class Goal:
         return Goal(variables, target, sibling_dep, name, is_conversion)
 
     def __str__(self):
+        """
+        :meta public:
+        """
         front = "|" if self.is_conversion else "⊢"
         return "\n".join(str(v) for v in self.variables) + \
             f"\n{front} {self.target}"
@@ -74,6 +86,8 @@ class GoalState:
     def is_solved(self) -> bool:
         """
         WARNING: Does not handle dormant goals.
+
+        :meta public:
         """
         return not self.goals
 
@@ -87,6 +101,9 @@ class GoalState:
         return GoalState.parse_inner(payload["nextStateId"], payload["goals"], _sentinel)
 
     def __str__(self):
+        """
+        :meta public:
+        """
         return "\n".join([str(g) for g in self.goals])
 
 @dataclass(frozen=True)
@@ -102,7 +119,7 @@ class TacticHave:
 @dataclass(frozen=True)
 class TacticLet:
     """
-    The `have` tactic, equivalent to
+    The `let` tactic, equivalent to
     ```lean
     let {binder_name} : {branch} := ...
     ```
@@ -126,4 +143,4 @@ class TacticExpr:
     """
     expr: str
 
-Tactic = Union[str, TacticHave, TacticLet, TacticCalc, TacticExpr]
+Tactic: TypeAlias = str | TacticHave | TacticLet | TacticCalc | TacticExpr
