@@ -15,3 +15,12 @@ Execute, in the root directory of this repository,
 ``` sh
 docker build . --tag pantograph
 ```
+
+## Experiments
+
+Execute in the project root directory
+``` sh
+experiments/dsp/early.sh
+```
+the results will be written to `result/`
+

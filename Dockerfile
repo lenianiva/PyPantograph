@@ -14,6 +14,6 @@ COPY . /root/pantograph
 WORKDIR /root/pantograph
 
 RUN poetry build &&\
-	poetry install
+	poetry install --with dev
 
 WORKDIR /data
