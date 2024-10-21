@@ -14,7 +14,7 @@ python = "^3.10"
 generate-setup-file = false
 script = "build.py"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 # Experiment related dependencies here to not clutter the main project dependencies.
 notebook = "^7.2.1"
 numpy = "^1.26.4"
