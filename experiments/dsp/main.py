@@ -329,11 +329,6 @@ def full_proof_search_dsp_lean(
 
 experiment_dir = Path(__file__).resolve().parent
 
-def get_project_and_lean_path():
-    cwd = experiment_dir / 'lean_src_proj'
-    p = subprocess.check_output(['lake', 'env', 'printenv', 'LEAN_PATH'], cwd=cwd)
-    return cwd, p
-
 def load_data(args) -> list[Datum]:
     p = Path(args.dataset).expanduser()
     data = None
@@ -363,13 +358,15 @@ def main(args):
     path_output = Path(args.output)
     path_output.mkdir(exist_ok=True, parents=True)
 
+    project_path = experiment_dir / 'lean_src_proj'
+    p = subprocess.check_output(['lake', 'build'], cwd=project_path)
+    print(p)
+
     # Start server
-    project_path, lean_path = get_project_and_lean_path()
     def server_func():
         return Server(
             imports=["Mathlib", "Aesop"],
             project_path=project_path,
-            lean_path=lean_path,
             core_options=DEFAULT_CORE_OPTIONS,
         )
 

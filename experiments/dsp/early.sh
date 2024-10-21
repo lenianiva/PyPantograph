@@ -5,4 +5,4 @@ docker run --rm -it \
 	--entrypoint poetry \
 	--env OPENAI_API_KEY=$OPENAI_API_KEY \
 	pantograph run \
-	python experiments/dsp/main.py eval --output /data/result/debug
+	python /data/experiments/dsp/main.py eval --output /data/result/debug
