@@ -5,7 +5,7 @@ on:
   push:
     branches:
     - main
-    - docs/main
+    - doc/main
 
 # This job installs dependencies, builds the book, and pushes it to `gh-pages`
 jobs:
@@ -16,6 +16,8 @@ jobs:
       id-token: write
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: true
 
     # Install dependencies
     - name: Set up Python 3.11
@@ -23,10 +25,25 @@ jobs:
       with:
         python-version: 3.11
 
-    # Build the book
-    - name: Build the book
+    - name: Install elan
       run: |
-        jupyter-book build docs
+        set -o pipefail
+        curl -sSfL https://github.com/leanprover/elan/releases/download/v3.1.1/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+        ./elan-init -y --default-toolchain none
+        echo "$HOME/.elan/bin" >> "${GITHUB_PATH}"
+
+    - name: Install Lean
+      run: |
+        elan toolchain install $(<src/lean-toolchain)
+
+    - name: Install poetry
+      run: |
+        pip install poetry
+        poetry install --only doc
+
+    - name: Build documentations
+      run: |
+        poetry run jupyter-book build docs
 
     # Upload the book's HTML as an artifact
     - name: Upload artifact

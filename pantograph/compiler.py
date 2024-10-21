@@ -2,6 +2,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class TacticInvocation:
+    """
+    One tactic invocation with the before/after goals extracted from Lean source
+    code.
+    """
     before: str
     after: str
     tactic: str

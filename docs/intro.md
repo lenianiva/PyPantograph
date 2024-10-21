@@ -1,6 +1,6 @@
-# Intro
+# Introduction
 
-This is PyPantograph, an machine-to-machine interaction interface for Lean 4.
+This is Pantograph, an machine-to-machine interaction interface for Lean 4.
 Its main purpose is to train and evaluate theorem proving agents. The main
 features are:
 1. Interfacing via the Python library, REPL, or C Library

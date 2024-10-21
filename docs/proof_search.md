@@ -1,4 +1,0 @@
-# Proof Search
-
-About search ...
-

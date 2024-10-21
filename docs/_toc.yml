@@ -3,9 +3,14 @@ root: intro
 parts:
 - caption: Features
   chapters:
+  - file: setup
   - file: goal
-  - file: proof_search
+  - file: agent-search
+  - file: data
+  - file: drafting
 - caption: API Documentation
   chapters:
   - file: api-server
   - file: api-search
+  - file: api-expr
+  - file: api-data
