@@ -22,7 +22,26 @@ server = Server()
 
 ## Lean Dependencies
 
+The server created from `Server()` is sufficient for basic theorem proving tasks
+reliant on Lean's `Init` library. Some users may find this insufficient and want
+to use non-builtin libraries such as Aesop or Mathlib4.
+
 To use external Lean dependencies such as
 [Mathlib4](https://github.com/leanprover-community/mathlib4), Pantograph relies
 on an existing Lean repository. Instructions for creating this repository can be
 found [here](https://docs.lean-lang.org/lean4/doc/setup.html#lake).
+
+After creating this initial Lean repository, execute in the repository
+```sh
+lake build
+```
+
+to build all files from the repository. This step is necessary after any file in
+the repository is modified.
+
+Then, feed the repository's path to the server
+```python
+server = Server(project_path="./path-to-lean-repo/")
+```
+
+For a complete example, see `examples/`.

@@ -24,12 +24,28 @@ def _get_proc_cwd():
 def _get_proc_path():
     return _get_proc_cwd() / "pantograph-repl"
 
-class TacticFailure(Exception):
-    pass
-class ServerError(Exception):
-    pass
+def get_lean_path(project_path):
+    """
+    Extracts the `LEAN_PATH` variable from a project path.
+    """
+    import subprocess
+    p = subprocess.check_output(
+        ['lake', 'env', 'printenv', 'LEAN_PATH'],
+        cwd=project_path,
+    )
+    return p
 
-DEFAULT_CORE_OPTIONS=["maxHeartbeats=0", "maxRecDepth=100000"]
+class TacticFailure(Exception):
+    """
+    Indicates a tactic failed to execute
+    """
+class ServerError(Exception):
+    """
+    Indicates a logical error in the server.
+    """
+
+
+DEFAULT_CORE_OPTIONS = ["maxHeartbeats=0", "maxRecDepth=100000"]
 
 
 class Server:
@@ -54,6 +70,8 @@ class Server:
         self.timeout = timeout
         self.imports = imports
         self.project_path = project_path if project_path else _get_proc_cwd()
+        if project_path and not lean_path:
+            lean_path = get_lean_path(project_path)
         self.lean_path = lean_path
         self.maxread = maxread
         self.proc_path = _get_proc_path()
@@ -68,6 +86,9 @@ class Server:
         self.to_remove_goal_states = []
 
     def is_automatic(self):
+        """
+        Check if the server is running in automatic mode
+        """
         return self.options.get("automaticMode", True)
 
     def restart(self):
@@ -185,6 +206,9 @@ class Server:
         return GoalState.parse(result, self.to_remove_goal_states)
 
     def goal_conv_begin(self, state: GoalState, goal_id: int) -> GoalState:
+        """
+        Start conversion tactic mode on one goal
+        """
         result = self.run('goal.tactic', {"stateId": state.state_id, "goalId": goal_id, "conv": True})
         if "error" in result:
             raise ServerError(result["desc"])
@@ -195,6 +219,9 @@ class Server:
         return GoalState.parse(result, self.to_remove_goal_states)
 
     def goal_conv_end(self, state: GoalState) -> GoalState:
+        """
+        Exit conversion tactic mode on all goals
+        """
         result = self.run('goal.tactic', {"stateId": state.state_id, "goalId": 0, "conv": False})
         if "error" in result:
             raise ServerError(result["desc"])
@@ -219,7 +246,7 @@ class Server:
         with open(file_name, 'rb') as f:
             content = f.read()
             units = [
-                content[unit["bounary"][0]:unit["boundary"][1]].decode('utf-8')
+                content[unit["boundary"][0]:unit["boundary"][1]].decode('utf-8')
                 for unit in result['units']
             ]
             invocations = [

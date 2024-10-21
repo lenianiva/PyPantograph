@@ -5,7 +5,8 @@ parts:
   chapters:
   - file: setup
   - file: goal
-  - file: proof_search
+  - file: agent-search
+  - file: data
   - file: drafting
 - caption: API Documentation
   chapters:

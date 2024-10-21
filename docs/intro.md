@@ -1,4 +1,4 @@
-# Intro
+# Introduction
 
 This is Pantograph, an machine-to-machine interaction interface for Lean 4.
 Its main purpose is to train and evaluate theorem proving agents. The main
