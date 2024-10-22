@@ -18,6 +18,12 @@ docker build . --tag pantograph
 
 ## Experiments
 
+### Early Evaluation
+
+Due to the nature of this project and how Lean's build system works, the first
+pass needs to build the Mathlib library. This building of the library will take
+about 30 minutes to run.
+
 Execute in the project root directory
 ``` sh
 experiments/dsp/early.sh

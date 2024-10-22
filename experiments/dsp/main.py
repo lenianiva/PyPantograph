@@ -1,4 +1,5 @@
 import sys, os, json, subprocess, time, datetime
+from abc import abstractmethod
 from pathlib import Path
 from dataclasses import asdict
 from typing import Union, Any, Tuple, Optional
@@ -37,6 +38,13 @@ class Engine:
         pass
 
     def __call__(self, *args, **kwards):
+        pass
+
+    @abstractmethod
+    def sample_draft(self, prompt: str):
+        pass
+    @abstractmethod
+    def sample_sketch(self, prompt: str):
         pass
 
 class OpenAI_DSP_Engine(Engine):
@@ -88,6 +96,7 @@ class OpenAI_DSP_Engine(Engine):
 
     def sample_draft(self, prompt: str):
         extra = {} if self.model.startswith("o1") else dict(
+            seed=0,
             temperature=self.draft_sampling_params.temperature,
             top_p=self.draft_sampling_params.top_p,
             stop=self.draft_sampling_params.stop[:3],
@@ -103,6 +112,7 @@ class OpenAI_DSP_Engine(Engine):
         )
     def sample_sketch(self, prompt: str):
         extra = {} if self.model.startswith("o1") else dict(
+            seed=0,
             temperature=self.sketch_sampling_params.temperature,
             top_p=self.sketch_sampling_params.top_p,
         )
@@ -359,8 +369,14 @@ def main(args):
     path_output.mkdir(exist_ok=True, parents=True)
 
     project_path = experiment_dir / 'lean_src_proj'
-    p = subprocess.check_output(['lake', 'build'], cwd=project_path)
-    print(p)
+
+    print("Building src project ...")
+    while True:
+        # Lean sometimes fails to build. Try until it succeeds.
+        completion = subprocess.run(['lake', 'build'], cwd=project_path, check=False)
+        if completion.returncode == 0:
+            break;
+    print("Built src project")
 
     # Start server
     def server_func():
