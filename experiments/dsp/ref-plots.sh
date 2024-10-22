@@ -1,11 +1,12 @@
 #!/usr/bin/env sh
 
+IMAGE=chrysoberyl/pantograph
 plot() {
 	docker run --rm -it \
 		--volume $PWD:/data \
 		--entrypoint poetry \
 		--env OPENAI_API_KEY=$OPENAI_API_KEY \
-		pantograph run \
+		$IMAGE run \
 		python /data/experiments/dsp/plot.py $@
 }
 

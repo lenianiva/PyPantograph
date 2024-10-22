@@ -1,11 +1,13 @@
 #!/bin/bash
 
+IMAGE=chrysoberyl/pantograph
+
 main() {
 	docker run --rm -it \
 		--volume $PWD:/data \
 		--entrypoint poetry \
 		--env OPENAI_API_KEY=$OPENAI_API_KEY \
-		pantograph run \
+		$IMAGE run \
 		python /data/experiments/dsp/main.py eval $@
 }
 plot() {
@@ -13,7 +15,7 @@ plot() {
 		--volume $PWD:/data \
 		--entrypoint poetry \
 		--env OPENAI_API_KEY=$OPENAI_API_KEY \
-		pantograph run \
+		$IMAGE run \
 		python /data/experiments/dsp/plot.py $@
 }
 BASE_DIR=/data/result/o1

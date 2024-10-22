@@ -10,18 +10,30 @@ The experiments require
 - At least 15G of disk space on the drive hosting this repository
 - An [OpenAI API](https://openai.com/index/openai-api/) key, for invoking the models.
 
-## Building/Loading the container
+Set the `OPENAI_API_KEY` environment variable to the API key.
 
-If you **have** the docker image:
+### Building/Loading the container
+
+There are 3 ways to load the container. Choose one.
+- (Artefact reviewer) If you **have** the docker image:
 ``` sh
 docker load --input pantograph
 ```
-(Optional) You can also build the docker image from scratch
+- Use the docker repository
+``` sh
+docker pull chrysoberyl/pantograph
+```
+- Build the docker image from scratch
 ``` sh
 docker build . --tag pantograph
 ```
 
 ## Experiments
+
+The experiments are bound by limitations of OpenAI. Since OpenAI as a commercial
+company cannot indefinitely store all snapshots of their models, the experiments
+rely on OpenAI's provided version of `o1-preview` and `gpt-4o` models. This may
+impact the reproducibility of the experiments in the future.
 
 ### Early Evaluation
 
@@ -42,7 +54,9 @@ To generate the plots for the paper, execute
 ``` sh
 bash experiments/dsp/ref-plots.sh
 ```
-which will output the plots in `result/ref-{o1,4o}/plot` based on data in `result/ref-*`
+
+which will output the plots in `result/ref-{o1,4o}/plot` based on the provided
+experiment result data in `result/ref-*`
 
 ### GPT-4o experiment
 
