@@ -288,12 +288,20 @@ def single_proof_search_dsp_lean(
                 name=str(datum),
                 error=str(e),
             )
-        # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
-        prove_result = step_prove(eng, server, x_fl_prob, sketch)
-        results.append(prove_result)
-        if isinstance(prove_result, SearchResult) and prove_result.success:
-            success = True
-            break
+        try:
+            # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
+            prove_result = step_prove(eng, server, x_fl_prob, sketch)
+            results.append(prove_result)
+            if isinstance(prove_result, SearchResult) and prove_result.success:
+                success = True
+                break
+        except Exception as e:
+            print(colored(f"Search failed: {e}", "red"))
+            return DatumResult(
+                name=str(datum),
+                error=str(e),
+            )
+
     duration = time.time() - start_time
 
     return DatumResult(
