@@ -62,6 +62,7 @@ experiment result data in `result/ref-*`
 
 ``` sh
 bash experiments/dsp/all-4o.sh
+bash experiments/dsp/plot-4o.sh
 ```
 
 which will output the plots in `result/4o/plot`
@@ -70,6 +71,7 @@ which will output the plots in `result/4o/plot`
 
 ``` sh
 bash experiments/dsp/all-o1.sh
+bash experiments/dsp/plot-o1.sh
 ```
 
 which will output the plots in `result/o1/plot`
