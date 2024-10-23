@@ -23,3 +23,19 @@ LeanDojo has architectural limitations that prevent it from gaining new features
 such as drafting without refactoring. Almost all of Pantograph's business logic
 is written in Lean, and Pantograph achieves tighter coupling between the data
 extraction and proof search components.
+
+## Referencing
+
+[Paper Link](https://arxiv.org/abs/2410.16429)
+
+```bib
+@misc{pantograph,
+      title={Pantograph: A Machine-to-Machine Interaction Interface for Advanced Theorem Proving, High Level Reasoning, and Data Extraction in Lean 4},
+      author={Leni Aniva and Chuyue Sun and Brando Miranda and Clark Barrett and Sanmi Koyejo},
+      year={2024},
+      eprint={2410.16429},
+      archivePrefix={arXiv},
+      primaryClass={cs.LO},
+      url={https://arxiv.org/abs/2410.16429},
+}
+```
