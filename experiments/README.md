@@ -17,7 +17,7 @@ Set the `OPENAI_API_KEY` environment variable to the API key.
 There are 3 ways to load the container. Choose one.
 - (Artefact reviewer) If you **have** the docker image:
 ``` sh
-docker load --input pantograph
+docker load --input pantograph.tar
 ```
 - Use the docker repository
 ``` sh
@@ -25,7 +25,7 @@ docker pull chrysoberyl/pantograph
 ```
 - Build the docker image from scratch
 ``` sh
-docker build . --tag pantograph
+docker build . --tag chrysoberyl/pantograph
 ```
 
 ## Experiments
