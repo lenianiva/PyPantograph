@@ -265,14 +265,20 @@ def single_proof_search_dsp_lean(
     ) -> DatumResult:
 
     start_time = time.time()
-    # -- Draft: [y_nl_pred_draft]_n ~ draft(eng, x_nl_prob, P_draft)
-    y_nl_pred_drafts = step_draft(eng, datum)
+    try:
+        # -- Draft: [y_nl_pred_draft]_n ~ draft(eng, x_nl_prob, P_draft)
+        y_nl_pred_drafts = step_draft(eng, datum)
 
-    # -- Sketch: z_fl_pred_sketch ~ sketch(eng, x_nl_prob, [y_nl_pred_draft]_n, x_fl_prob, P_sketch)
-    z_fl_pred_sketches, x_fl_prob = step_sketch(eng, datum, y_nl_pred_drafts)
+        # -- Sketch: z_fl_pred_sketch ~ sketch(eng, x_nl_prob, [y_nl_pred_draft]_n, x_fl_prob, P_sketch)
+        z_fl_pred_sketches, x_fl_prob = step_sketch(eng, datum, y_nl_pred_drafts)
 
-    assert len(z_fl_pred_sketches) == eng.sketch_sampling_params.n
-
+        assert len(z_fl_pred_sketches) == eng.sketch_sampling_params.n
+    except Exception as e:
+        print(colored(f"Failed to create sketch/draft: {e}", "red"))
+        return DatumResult(
+            name=str(datum),
+            error=str(e),
+        )
 
     results = []
     success = False
