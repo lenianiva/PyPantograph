@@ -1,11 +1,9 @@
 name: deploy-docs
 
-# Run this when the master or main branch changes
 on:
   push:
     branches:
     - main
-    - doc/main
 
 # This job installs dependencies, builds the book, and pushes it to `gh-pages`
 jobs:
@@ -19,8 +17,7 @@ jobs:
       with:
         submodules: true
 
-    # Install dependencies
-    - name: Set up Python 3.11
+    - name: Install Python
       uses: actions/setup-python@v4
       with:
         python-version: 3.11
