@@ -4,7 +4,7 @@
 # Execute this at the project root directory to produce `artefact.zip`
 
 echo "Packing Git archive"
-git archive --format zip --output artefact.zip HEAD
+git-archive-all artefact.zip
 echo "Packing docker image"
 docker image save chrysoberyl/pantograph > pantograph.tar
 echo "Adding experimental results"

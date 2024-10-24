@@ -28,6 +28,9 @@ docker pull chrysoberyl/pantograph
 docker build . --tag chrysoberyl/pantograph
 ```
 
+The docker image's name **must be** `chrysoberyl/pantograph` for the shell
+scripts below to work.
+
 ## Experiments
 
 The experiments are bound by limitations of OpenAI. Since OpenAI as a commercial
@@ -46,6 +49,11 @@ Execute in the project root directory
 experiments/dsp/early.sh
 ```
 the results will be written to `result/`
+
+All experiments are cached, so if they crash halfway (which really should not
+happen) you can continue to run them and they'll pick up from where they left
+off. Hence you can delete the relevant folders in `result/` to force an
+experiment to restart from the beginning.
 
 ### Plots for the paper
 

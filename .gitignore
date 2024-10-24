@@ -8,5 +8,8 @@
 *.egg-info
 
 # Output
+*.zip
+*.tar
 /dist
 /venv
+/result
