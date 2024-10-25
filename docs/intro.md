@@ -19,10 +19,9 @@ know that the Coq Serapi was superseded by CoqLSP. In the opinion of the
 authors, this is a mistake. An interface conducive for human operators to write
 proofs is often not an interface conductive to search.
 
-LeanDojo has architectural limitations that prevent it from gaining new features
-such as drafting without refactoring. Almost all of Pantograph's business logic
-is written in Lean, and Pantograph achieves tighter coupling between the data
-extraction and proof search components.
+Almost all of Pantograph's business logic is written in Lean, and Pantograph
+achieves tighter coupling between the data extraction and proof search
+components.
 
 ## Referencing
 
