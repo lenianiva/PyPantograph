@@ -15,6 +15,7 @@ class SearchState:
     parent: Optional[Self]
     parent_goal_id: Optional[int]
     priorities: list[float]
+    tactic_feedback: Optional[str] = None
 
     def __post_init__(self):
         assert len(self.priorities) == len(self.goal_state.goals)
@@ -48,7 +49,6 @@ class Agent:
     """
     An agent interface for proof search
     """
-    tactic_feedback: Optional[str] = None
 
     @abstractmethod
     def next_tactic(
@@ -126,7 +126,7 @@ class Agent:
                 print(f"Next tactic: {tactic}")
             if not tactic:
                 # resets the feedback
-                self.tactic_feedback = None
+                search_state.tactic_feedback = None
                 # pop the current state and continue to the next
                 search_stack.pop(-1)
                 if not search_stack:
@@ -163,7 +163,7 @@ class Agent:
             except TacticFailure as t:
                 if verbose:
                     print(f"Tactic failed: {t}")
-                self.tactic_feedback = str(t)
+                search_state.tactic_feedback = str(t)
                 # try the next tactic. this one failed
             except ServerError as e:
                 raise RuntimeError(f"While executing tactic: {tactic}") from e
