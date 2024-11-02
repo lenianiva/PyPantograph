@@ -44,12 +44,16 @@ The experiments should be run in `poetry shell`. The environment variable
 
 ## Referencing
 
+[Paper Link](https://arxiv.org/abs/2410.16429)
+
 ```bib
 @misc{pantograph,
-	title = "Pantograph, A Machine-to-Machine Interface for Lean 4",
-	author = {Aniva, Leni and Miranda, Brando and Sun, Chuyue},
-	year = 2024,
-	howpublished = {\url{https://github.com/lenianiva/PyPantograph}}
+      title={Pantograph: A Machine-to-Machine Interaction Interface for Advanced Theorem Proving, High Level Reasoning, and Data Extraction in Lean 4},
+      author={Leni Aniva and Chuyue Sun and Brando Miranda and Clark Barrett and Sanmi Koyejo},
+      year={2024},
+      eprint={2410.16429},
+      archivePrefix={arXiv},
+      primaryClass={cs.LO},
+      url={https://arxiv.org/abs/2410.16429},
 }
 ```
-

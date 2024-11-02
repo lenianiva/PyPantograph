@@ -11,6 +11,7 @@ from pantograph.expr import Expr, Tactic, GoalState
 
 @dataclass
 class SearchState:
+
     goal_state: GoalState
     parent: Optional[Self]
     parent_goal_id: Optional[int]
@@ -29,7 +30,6 @@ class SearchState:
         self.visit_count = 1
         self.exhausted = False
         self.subtree_exhausted = False
-
 
     @property
     def next_goal_id(self) -> int:
