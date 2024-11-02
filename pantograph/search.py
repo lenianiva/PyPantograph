@@ -492,7 +492,7 @@ class TestMCTSSearch(unittest.TestCase):
             server=server,
             goal_state=goal_state,
             max_steps=200,
-            verbose=True)
+            verbose=False)
         self.assertTrue(flag)
 
 
