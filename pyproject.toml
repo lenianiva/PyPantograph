@@ -6,6 +6,11 @@ authors = ["Leni Aniva <v@leni.sh>"]
 license = "GPL-3"
 readme = "README.md"
 
+include = [
+    { path = "pantograph/pantograph-repl", format = ["sdist", "wheel"] },
+    { path = "pantograph/lean-toolchain", format = ["sdist", "wheel"] },
+]
+
 [tool.poetry.dependencies]
 pexpect = "^4.9.0"
 python = "^3.10"

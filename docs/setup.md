@@ -4,7 +4,13 @@ Install `poetry`. Then, run
 ```sh
 poetry build
 ```
-This builds a wheel of Pantograph which can then be installed.
+
+This builds a wheel of Pantograph in `dist` which can then be installed. For
+example, a downstream project could have this line in its `pyproject.toml`
+
+```toml
+pantograph = { file = "path/to/wheel/dist/pantograph-0.2.19-cp312-cp312-manylinux_2_40_x86_64.whl" }
+```
 
 To run the examples and experiments, setup a poetry shell:
 ```sh
