@@ -239,6 +239,7 @@ class Server:
             'fileName': str(file_name),
             'invocations': True,
             "sorrys": False,
+            "newConstants": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
@@ -265,6 +266,7 @@ class Server:
             'file': command,
             'invocations': False,
             "sorrys": True,
+            "newConstants": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
@@ -295,7 +297,7 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.19")
+        self.assertEqual(get_version(), "0.2.22")
 
     def test_expr_type(self):
         server = Server()
