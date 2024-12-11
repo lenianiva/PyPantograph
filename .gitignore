@@ -1,11 +1,15 @@
 .*
 !.gitignore
 !.github
+!.dockerignore
 
 # Python
 *.py[cod]
 *.egg-info
 
 # Output
+*.zip
+*.tar
 /dist
 /venv
+/result
