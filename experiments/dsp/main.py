@@ -273,7 +273,7 @@ def single_proof_search_dsp_lean(
         try:
             server = server_func()
         except Exception as e:
-            print(colored("Failed to create server: {e}", "red"))
+            print(colored(f"Failed to create server: {e}", "red"))
             return DatumResult(
                 name=str(datum),
                 error=str(e),
