@@ -201,7 +201,7 @@ def step_prove(
     print(colored("Lean code:", "light_grey", attrs=["bold"]), lean_code)
 
     try:
-        states = server.load_sorry(lean_code)
+        units = server.load_sorry(lean_code)
     except ServerError as e:
         msg = f"Encountered exception: {e}"
         print(colored(msg, "red"))
@@ -210,18 +210,18 @@ def step_prove(
             error=msg,
         )
 
-    if len(states) != 1:
+    if len(units) != 1:
         print(colored("Model must output one compilation unit", "red"))
         return SketchParseFailure(
             sketch=fl_sketch,
             error="Model must output one compilation unit",
         )
 
-    state = states[0]
+    state = units[0].goal_state
 
-    if isinstance(state, list) and len(state) > 0:
+    if state is None:
         # This means `state` contains error messages
-        msg = "\n".join(state)
+        msg = "\n".join(units[0].messages)
         print(colored("Sketch failed:", "red"), msg)
         return SketchParseFailure(
             sketch=fl_sketch,
@@ -273,7 +273,7 @@ def single_proof_search_dsp_lean(
         try:
             server = server_func()
         except Exception as e:
-            print(colored("Failed to create server: {e}", "red"))
+            print(colored(f"Failed to create server: {e}", "red"))
             return DatumResult(
                 name=str(datum),
                 error=str(e),

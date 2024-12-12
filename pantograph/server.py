@@ -17,7 +17,7 @@ from pantograph.expr import (
     TacticCalc,
     TacticExpr,
 )
-from pantograph.compiler import TacticInvocation
+from pantograph.data import CompilationUnit
 
 def _get_proc_cwd():
     return Path(__file__).parent
@@ -173,7 +173,11 @@ class Server:
         if "error" in result:
             print(f"Cannot start goal: {expr}")
             raise ServerError(result["desc"])
-        return GoalState(state_id=result["stateId"], goals=[Goal.sentence(expr)], _sentinel=self.to_remove_goal_states)
+        return GoalState(
+            state_id=result["stateId"],
+            goals=[Goal.sentence(expr)],
+            _sentinel=self.to_remove_goal_states,
+        )
 
     def goal_tactic(self, state: GoalState, goal_id: int, tactic: Tactic) -> GoalState:
         """
@@ -231,7 +235,7 @@ class Server:
             raise ServerError(result["parseError"])
         return GoalState.parse(result, self.to_remove_goal_states)
 
-    def tactic_invocations(self, file_name: Union[str, Path]) -> tuple[list[str], list[TacticInvocation]]:
+    def tactic_invocations(self, file_name: Union[str, Path]) -> list[CompilationUnit]:
         """
         Collect tactic invocation points in file, and return them.
         """
@@ -239,49 +243,91 @@ class Server:
             'fileName': str(file_name),
             'invocations': True,
             "sorrys": False,
+            "newConstants": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
 
-        with open(file_name, 'rb') as f:
-            content = f.read()
-            units = [
-                content[unit["boundary"][0]:unit["boundary"][1]].decode('utf-8')
-                for unit in result['units']
-            ]
-            invocations = [
-                invocation
-                for unit in result['units']
-                for invocation in [TacticInvocation.parse(i) for i in unit['invocations']]
-            ]
-        return units, invocations
+        units = [CompilationUnit.parse(payload) for payload in result['units']]
+        return units
 
-    def load_sorry(self, command: str) -> list[GoalState | list[str]]:
+    def load_sorry(self, content: str) -> list[CompilationUnit]:
         """
         Executes the compiler on a Lean file. For each compilation unit, either
         return the gathered `sorry` s, or a list of messages indicating error.
         """
         result = self.run('frontend.process', {
-            'file': command,
+            'file': content,
             'invocations': False,
             "sorrys": True,
+            "newConstants": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
 
-        def parse_unit(unit: dict):
-            state_id = unit.get("goalStateId")
-            if state_id is None:
-                # NOTE: `state_id` maybe 0.
-                # Maybe error has occurred
-                return unit["messages"]
-            state = GoalState.parse_inner(state_id, unit["goals"], self.to_remove_goal_states)
-            return state
-        states = [
-            parse_unit(unit) for unit in result['units']
+        units = [
+            CompilationUnit.parse(payload, goal_state_sentinel=self.to_remove_goal_states)
+            for payload in result['units']
         ]
-        return states
+        return units
 
+    def env_add(self, name: str, t: Expr, v: Expr, is_theorem: bool = True):
+        result = self.run('env.add', {
+            "name": name,
+            "type": t,
+            "value": v,
+            "isTheorem": is_theorem,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+    def env_inspect(
+            self,
+            name: str,
+            print_value: bool = False,
+            print_dependency: bool = False) -> dict:
+        result = self.run('env.inspect', {
+            "name": name,
+            "value": print_value,
+            "dependency": print_dependency,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return result
+
+    def env_save(self, path: str):
+        result = self.run('env.save', {
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+    def env_load(self, path: str):
+        result = self.run('env.load', {
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+
+    def goal_save(self, goal_state: GoalState, path: str):
+        result = self.run('goal.save', {
+            "id": goal_state.state_id,
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+    def goal_load(self, path: str) -> GoalState:
+        result = self.run('goal.load', {
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        state_id = result['id']
+        result = self.run('goal.print', {
+            'stateId': state_id,
+            'goals': True,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return GoalState.parse_inner(state_id, result['goals'], self.to_remove_goal_states)
 
 
 def get_version():
@@ -295,7 +341,7 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.19")
+        self.assertEqual(get_version(), "0.2.23")
 
     def test_expr_type(self):
         server = Server()
@@ -445,9 +491,9 @@ class TestServer(unittest.TestCase):
 
     def test_load_sorry(self):
         server = Server()
-        state0, = server.load_sorry("example (p: Prop): p → p := sorry")
-        if isinstance(state0, list):
-            print(state0)
+        unit, = server.load_sorry("example (p: Prop): p → p := sorry")
+        self.assertIsNotNone(unit.goal_state, f"{unit.messages}")
+        state0 = unit.goal_state
         self.assertEqual(state0.goals, [
             Goal(
                 [Variable(name="p", t="Prop")],
@@ -457,6 +503,33 @@ class TestServer(unittest.TestCase):
         state1 = server.goal_tactic(state0, goal_id=0, tactic="intro h")
         state2 = server.goal_tactic(state1, goal_id=0, tactic="exact h")
         self.assertTrue(state2.is_solved)
+
+    def test_env_add_inspect(self):
+        server = Server()
+        server.env_add(
+            name="mystery",
+            t="forall (n: Nat), Nat",
+            v="fun (n: Nat) => n + 1",
+            is_theorem=False,
+        )
+        inspect_result = server.env_inspect(name="mystery")
+        self.assertEqual(inspect_result['type'], {'pp': 'Nat → Nat', 'dependentMVars': []})
+
+    def test_goal_state_pickling(self):
+        import tempfile
+        server = Server()
+        state0 = server.goal_start("forall (p q: Prop), Or p q -> Or q p")
+        with tempfile.TemporaryDirectory() as td:
+            path = td + "/goal-state.pickle"
+            server.goal_save(state0, path)
+            state0b = server.goal_load(path)
+            self.assertEqual(state0b.goals, [
+                Goal(
+                    variables=[
+                    ],
+                    target="∀ (p q : Prop), p ∨ q → q ∨ p",
+                )
+            ])
 
 
 if __name__ == '__main__':

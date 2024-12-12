@@ -27,13 +27,14 @@ def try_test_data(server, agent, entry: dict, max_steps: int, max_trials_per_goa
     agent.informal_stmt = entry["informal_stmt"]
     agent.informal_proof = entry["informal_proof"]
 
-    goal_states = server.load_sorry(command)
+    units = server.load_sorry(command)
 
-    if len(goal_states) != 1:
+    if len(units) != 1:
         return None
 
-    goal_state, = goal_states
-    if isinstance(goal_state, list):
+    unit, = units
+    goal_state = unit.goal_state
+    if goal_state is None:
         return None
     try:
         return agent.search(

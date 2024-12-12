@@ -93,6 +93,7 @@ class GoalState:
 
     @staticmethod
     def parse_inner(state_id: int, goals: list, _sentinel: list[int]):
+        assert _sentinel is not None
         goal_names = { g["name"]: i for i, g in enumerate(goals) }
         goals = [Goal.parse(g, goal_names) for g in goals]
         return GoalState(state_id, goals, _sentinel)
