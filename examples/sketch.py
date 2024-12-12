@@ -32,5 +32,5 @@ theorem add_comm_proved_formal_sketch : ∀ n m : Nat, n + m = m + n := by
 
 if __name__ == '__main__':
     server = Server()
-    state0, = server.load_sorry(sketch)
-    print(state0)
+    unit, = server.load_sorry(sketch)
+    print(unit.goal_state)

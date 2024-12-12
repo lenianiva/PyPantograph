@@ -25,8 +25,10 @@ class TacticInvocation:
 @dataclass(frozen=True)
 class CompilationUnit:
 
+    # Byte boundaries [begin, end[ of each compilation unit.
     i_begin: int
     i_end: int
+
     messages: list[str] = field(default_factory=list)
 
     invocations: Optional[list[TacticInvocation]] = None
