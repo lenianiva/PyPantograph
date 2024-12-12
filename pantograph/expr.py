@@ -93,12 +93,12 @@ class GoalState:
 
     @staticmethod
     def parse_inner(state_id: int, goals: list, _sentinel: list[int]):
+        assert _sentinel is not None
         goal_names = { g["name"]: i for i, g in enumerate(goals) }
         goals = [Goal.parse(g, goal_names) for g in goals]
         return GoalState(state_id, goals, _sentinel)
     @staticmethod
     def parse(payload: dict, _sentinel: list[int]):
-        assert _sentinel is not None
         return GoalState.parse_inner(payload["nextStateId"], payload["goals"], _sentinel)
 
     def __str__(self):

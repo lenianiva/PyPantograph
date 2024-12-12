@@ -327,7 +327,7 @@ class Server:
         })
         if "error" in result:
             raise ServerError(result["desc"])
-        return GoalState.parse(result, self.to_remove_goal_states)
+        return GoalState.parse_inner(state_id, result['goals'], self.to_remove_goal_states)
 
 
 def get_version():
@@ -514,6 +514,22 @@ class TestServer(unittest.TestCase):
         )
         inspect_result = server.env_inspect(name="mystery")
         self.assertEqual(inspect_result['type'], {'pp': 'Nat → Nat', 'dependentMVars': []})
+
+    def test_goal_state_pickling(self):
+        import tempfile
+        server = Server()
+        state0 = server.goal_start("forall (p q: Prop), Or p q -> Or q p")
+        with tempfile.TemporaryDirectory() as td:
+            path = td + "/goal-state.pickle"
+            server.goal_save(state0, path)
+            state0b = server.goal_load(path)
+            self.assertEqual(state0b.goals, [
+                Goal(
+                    variables=[
+                    ],
+                    target="∀ (p q : Prop), p ∨ q → q ∨ p",
+                )
+            ])
 
 
 if __name__ == '__main__':
