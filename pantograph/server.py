@@ -314,15 +314,20 @@ class Server:
         })
         if "error" in result:
             raise ServerError(result["desc"])
-    def goal_load(self, path: str) -> int:
-        # FIXME: Load the entire state
+    def goal_load(self, path: str) -> GoalState:
         result = self.run('goal.load', {
             "path": path,
         })
         if "error" in result:
             raise ServerError(result["desc"])
         state_id = result['id']
-        return state_id
+        result = self.run('goal.print', {
+            'stateId': state_id,
+            'goals': True,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return GoalState.parse(result, self.to_remove_goal_states)
 
 
 def get_version():
@@ -336,7 +341,7 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.22")
+        self.assertEqual(get_version(), "0.2.23")
 
     def test_expr_type(self):
         server = Server()
