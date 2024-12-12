@@ -294,6 +294,36 @@ class Server:
             raise ServerError(result["desc"])
         return result
 
+    def env_save(self, path: str):
+        result = self.run('env.save', {
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+    def env_load(self, path: str):
+        result = self.run('env.load', {
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+
+    def goal_save(self, goal_state: GoalState, path: str):
+        result = self.run('goal.save', {
+            "id": goal_state.state_id,
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+    def goal_load(self, path: str) -> int:
+        # FIXME: Load the entire state
+        result = self.run('goal.load', {
+            "path": path,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        state_id = result['id']
+        return state_id
+
 
 def get_version():
     import subprocess
