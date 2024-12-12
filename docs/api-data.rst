@@ -1,5 +1,5 @@
 Data
 =============
 
-.. automodule:: pantograph.compiler
+.. automodule:: pantograph.data
     :members:
