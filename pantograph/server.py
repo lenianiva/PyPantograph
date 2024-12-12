@@ -17,7 +17,7 @@ from pantograph.expr import (
     TacticCalc,
     TacticExpr,
 )
-from pantograph.compiler import TacticInvocation
+from pantograph.data import CompilationUnit
 
 def _get_proc_cwd():
     return Path(__file__).parent
@@ -173,7 +173,11 @@ class Server:
         if "error" in result:
             print(f"Cannot start goal: {expr}")
             raise ServerError(result["desc"])
-        return GoalState(state_id=result["stateId"], goals=[Goal.sentence(expr)], _sentinel=self.to_remove_goal_states)
+        return GoalState(
+            state_id=result["stateId"],
+            goals=[Goal.sentence(expr)],
+            _sentinel=self.to_remove_goal_states,
+        )
 
     def goal_tactic(self, state: GoalState, goal_id: int, tactic: Tactic) -> GoalState:
         """
@@ -231,7 +235,7 @@ class Server:
             raise ServerError(result["parseError"])
         return GoalState.parse(result, self.to_remove_goal_states)
 
-    def tactic_invocations(self, file_name: Union[str, Path]) -> tuple[list[str], list[TacticInvocation]]:
+    def tactic_invocations(self, file_name: Union[str, Path]) -> list[CompilationUnit]:
         """
         Collect tactic invocation points in file, and return them.
         """
@@ -244,26 +248,16 @@ class Server:
         if "error" in result:
             raise ServerError(result["desc"])
 
-        with open(file_name, 'rb') as f:
-            content = f.read()
-            units = [
-                content[unit["boundary"][0]:unit["boundary"][1]].decode('utf-8')
-                for unit in result['units']
-            ]
-            invocations = [
-                invocation
-                for unit in result['units']
-                for invocation in [TacticInvocation.parse(i) for i in unit['invocations']]
-            ]
-        return units, invocations
+        units = [CompilationUnit.parse(payload) for payload in result['units']]
+        return units
 
-    def load_sorry(self, command: str) -> list[GoalState | list[str]]:
+    def load_sorry(self, content: str) -> list[CompilationUnit]:
         """
         Executes the compiler on a Lean file. For each compilation unit, either
         return the gathered `sorry` s, or a list of messages indicating error.
         """
         result = self.run('frontend.process', {
-            'file': command,
+            'file': content,
             'invocations': False,
             "sorrys": True,
             "newConstants": False,
@@ -271,19 +265,11 @@ class Server:
         if "error" in result:
             raise ServerError(result["desc"])
 
-        def parse_unit(unit: dict):
-            state_id = unit.get("goalStateId")
-            if state_id is None:
-                # NOTE: `state_id` maybe 0.
-                # Maybe error has occurred
-                return unit["messages"]
-            state = GoalState.parse_inner(state_id, unit["goals"], self.to_remove_goal_states)
-            return state
-        states = [
-            parse_unit(unit) for unit in result['units']
+        units = [
+            CompilationUnit.parse(payload, goal_state_sentinel=self.to_remove_goal_states)
+            for payload in result['units']
         ]
-        return states
-
+        return units
 
 
 def get_version():
@@ -447,9 +433,9 @@ class TestServer(unittest.TestCase):
 
     def test_load_sorry(self):
         server = Server()
-        state0, = server.load_sorry("example (p: Prop): p → p := sorry")
-        if isinstance(state0, list):
-            print(state0)
+        unit, = server.load_sorry("example (p: Prop): p → p := sorry")
+        self.assertIsNotNone(unit.goal_state, f"{unit.messages}")
+        state0 = unit.goal_state
         self.assertEqual(state0.goals, [
             Goal(
                 [Variable(name="p", t="Prop")],

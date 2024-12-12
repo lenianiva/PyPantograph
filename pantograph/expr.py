@@ -98,6 +98,7 @@ class GoalState:
         return GoalState(state_id, goals, _sentinel)
     @staticmethod
     def parse(payload: dict, _sentinel: list[int]):
+        assert _sentinel is not None
         return GoalState.parse_inner(payload["nextStateId"], payload["goals"], _sentinel)
 
     def __str__(self):
