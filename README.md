@@ -20,7 +20,8 @@ poetry install
 
 Build the documentations by
 ```sh
-jupyter-book build docs
+poetry install --only doc
+poetry run jupyter-book build docs
 ```
 Then serve
 ```sh
