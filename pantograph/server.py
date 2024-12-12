@@ -271,6 +271,29 @@ class Server:
         ]
         return units
 
+    def env_add(self, name: str, t: Expr, v: Expr, is_theorem: bool = True):
+        result = self.run('env.add', {
+            "name": name,
+            "type": t,
+            "value": v,
+            "isTheorem": is_theorem,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+    def env_inspect(
+            self,
+            name: str,
+            print_value: bool = False,
+            print_dependency: bool = False) -> dict:
+        result = self.run('env.inspect', {
+            "name": name,
+            "value": print_value,
+            "dependency": print_dependency,
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return result
+
 
 def get_version():
     import subprocess
@@ -445,6 +468,17 @@ class TestServer(unittest.TestCase):
         state1 = server.goal_tactic(state0, goal_id=0, tactic="intro h")
         state2 = server.goal_tactic(state1, goal_id=0, tactic="exact h")
         self.assertTrue(state2.is_solved)
+
+    def test_env_add_inspect(self):
+        server = Server()
+        server.env_add(
+            name="mystery",
+            t="forall (n: Nat), Nat",
+            v="fun (n: Nat) => n + 1",
+            is_theorem=False,
+        )
+        inspect_result = server.env_inspect(name="mystery")
+        self.assertEqual(inspect_result['type'], {'pp': 'Nat → Nat', 'dependentMVars': []})
 
 
 if __name__ == '__main__':
