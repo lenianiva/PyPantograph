@@ -3,8 +3,9 @@ Class which manages a Pantograph instance. All calls to the kernel uses this
 interface.
 """
 import json, pexpect, unittest, os
-from typing import Union
+from typing import Union, List, Optional, Dict, List, Any
 from pathlib import Path
+
 from pantograph.expr import (
     parse_expr,
     Expr,
@@ -17,23 +18,19 @@ from pantograph.expr import (
     TacticCalc,
     TacticExpr,
 )
+from pantograph.utils import (
+    to_sync,
+    Spwan,
+    _get_proc_cwd,
+    _get_proc_path,
+    get_lean_path_async,
+    get_lean_path,
+)
 from pantograph.data import CompilationUnit
 
-def _get_proc_cwd():
-    return Path(__file__).parent
-def _get_proc_path():
-    return _get_proc_cwd() / "pantograph-repl"
 
-def get_lean_path(project_path):
-    """
-    Extracts the `LEAN_PATH` variable from a project path.
-    """
-    import subprocess
-    p = subprocess.check_output(
-        ['lake', 'env', 'printenv', 'LEAN_PATH'],
-        cwd=project_path,
-    )
-    return p
+DEFAULT_CORE_OPTIONS = ["maxHeartbeats=0", "maxRecDepth=100000"]
+
 
 class TacticFailure(Exception):
     """
@@ -44,25 +41,22 @@ class ServerError(Exception):
     Indicates a logical error in the server.
     """
 
-
-DEFAULT_CORE_OPTIONS = ["maxHeartbeats=0", "maxRecDepth=100000"]
-
-
 class Server:
     """
     Main interaction instance with Pantograph
     """
 
     def __init__(self,
-                 imports=["Init"],
-                 project_path=None,
-                 lean_path=None,
+                 imports: List[str]=["Init"],
+                 project_path: Optional[str]=None,
+                 lean_path: Optional[str]=None,
                  # Options for executing the REPL.
                  # Set `{ "automaticMode" : False }` to handle resumption by yourself.
-                 options={},
-                 core_options=DEFAULT_CORE_OPTIONS,
-                 timeout=120,
-                 maxread=1000000):
+                 options: Dict[str, Any]={},
+                 core_options: List[str]=DEFAULT_CORE_OPTIONS,
+                 timeout: int=120,
+                 maxread: int=1000000,
+                 _sync_init: bool=True):
         """
         timeout: Amount of time to wait for execution
         maxread: Maximum number of characters to read (especially important for large proofs and catalogs)
@@ -70,7 +64,7 @@ class Server:
         self.timeout = timeout
         self.imports = imports
         self.project_path = project_path if project_path else _get_proc_cwd()
-        if project_path and not lean_path:
+        if _sync_init and project_path and not lean_path:
             lean_path = get_lean_path(project_path)
         self.lean_path = lean_path
         self.maxread = maxread
@@ -80,10 +74,63 @@ class Server:
         self.core_options = core_options
         self.args = " ".join(imports + [f'--{opt}' for opt in core_options])
         self.proc = None
-        self.restart()
+        if _sync_init:
+            self.restart()
 
         # List of goal states that should be garbage collected
         self.to_remove_goal_states = []
+
+    @classmethod
+    async def create(cls,
+                 imports=["Init"],
+                 project_path=None,
+                 lean_path=None,
+                 # Options for executing the REPL.
+                 # Set `{ "automaticMode" : False }` to handle resumption by yourself.
+                 options={},
+                 core_options=DEFAULT_CORE_OPTIONS,
+                 timeout=120,
+                 maxread=1000000) -> 'Server':
+        """
+        timeout: Amount of time to wait for execution
+        maxread: Maximum number of characters to read (especially important for large proofs and catalogs)
+        """
+        self = cls(
+            imports,
+            project_path,
+            lean_path,
+            options,
+            core_options,
+            timeout,
+            maxread,
+            _sync_init=False
+        )
+        if project_path and not lean_path:
+            lean_path = await get_lean_path_async(project_path)
+        self.lean_path = lean_path
+        await self.restart_async()
+        return self
+
+    def __enter__(self) -> "Server":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self._close()
+
+    def __del__(self):
+        self._close()
+
+    def _close(self):
+        if self.proc is not None:
+            try:
+                if self.proc.async_pw_transport:
+                    self.proc.async_pw_transport[1].close()
+                self.proc.close()
+                if self.proc.isalive():
+                    self.proc.terminate(force=True)
+            except:
+                pass
+            self.proc = None
 
     def is_automatic(self):
         """
@@ -91,14 +138,14 @@ class Server:
         """
         return self.options.get("automaticMode", True)
 
-    def restart(self):
+    async def restart_async(self):
         if self.proc is not None:
-            self.proc.close()
+            self._close()
         env = os.environ
         if self.lean_path:
             env = env | {'LEAN_PATH': self.lean_path}
 
-        self.proc = pexpect.spawn(
+        self.proc = Spwan(
             f"{self.proc_path} {self.args}",
             encoding="utf-8",
             maxread=self.maxread,
@@ -108,78 +155,88 @@ class Server:
         )
         self.proc.setecho(False) # Do not send any command before this.
         try:
-            ready = self.proc.readline() # Reads the "ready."
+            ready = await self.proc.readline_async() # Reads the "ready."
             assert ready.rstrip() == "ready.", f"Server failed to emit ready signal: {ready}; Maybe the project needs to be rebuilt"
         except pexpect.exceptions.TIMEOUT as exc:
             raise RuntimeError("Server failed to emit ready signal in time") from exc
 
         if self.options:
-            self.run("options.set", self.options)
+            await self.run_async("options.set", self.options)
 
-        self.run('options.set', {'printDependentMVars': True})
+        await self.run_async('options.set', {'printDependentMVars': True})
 
-    def run(self, cmd, payload):
+    restart = to_sync(restart_async)
+
+    async def run_async(self, cmd, payload):
         """
         Runs a raw JSON command. Preferably use one of the commands below.
 
         :meta private:
         """
         assert self.proc
-        s = json.dumps(payload)
-        self.proc.sendline(f"{cmd} {s}")
+        s = json.dumps(payload, ensure_ascii=False)
+        await self.proc.sendline_async(f"{cmd} {s}")
         try:
-            line = self.proc.readline()
+            line = await self.proc.readline_async()
             try:
                 obj = json.loads(line)
                 if obj.get("error") == "io":
                     # The server is dead
-                    self.proc = None
+                    self._close()
                 return obj
             except Exception as e:
                 self.proc.sendeof()
-                remainder = self.proc.read()
-                self.proc = None
-                raise RuntimeError(f"Cannot decode: {line}\n{remainder}") from e
+                remainder = await self.proc.read_async()
+                self._close()
+                raise ServerError(f"Cannot decode: {line}\n{remainder}") from e
         except pexpect.exceptions.TIMEOUT as exc:
-            self.proc = None
+            self._close()
             return {"error": "timeout", "message": str(exc)}
 
-    def gc(self):
+    run = to_sync(run_async)
+
+    async def gc_async(self):
         """
         Garbage collect deleted goal states to free up memory.
         """
         if not self.to_remove_goal_states:
             return
-        result = self.run('goal.delete', {'stateIds': self.to_remove_goal_states})
+        result = await self.run_async('goal.delete', {'stateIds': self.to_remove_goal_states})
         self.to_remove_goal_states.clear()
         if "error" in result:
-            raise ServerError(result["desc"])
+            raise ServerError(result)
 
-    def expr_type(self, expr: Expr) -> Expr:
+    gc = to_sync(gc_async)
+
+    async def expr_type_async(self, expr: Expr) -> Expr:
         """
         Evaluate the type of a given expression. This gives an error if the
         input `expr` is ill-formed.
         """
-        result = self.run('expr.echo', {"expr": expr})
+        result = await self.run_async('expr.echo', {"expr": expr})
         if "error" in result:
-            raise ServerError(result["desc"])
+            raise ServerError(result)
         return parse_expr(result["type"])
 
-    def goal_start(self, expr: Expr) -> GoalState:
+    expr_type = to_sync(expr_type_async)
+
+    async def goal_start_async(self, expr: Expr) -> GoalState:
         """
         Create a goal state with one root goal, whose target is `expr`
         """
-        result = self.run('goal.start', {"expr": str(expr)})
+        result = await self.run_async('goal.start', {"expr": str(expr)})
         if "error" in result:
             print(f"Cannot start goal: {expr}")
-            raise ServerError(result["desc"])
+            raise ServerError(result)
         return GoalState(
             state_id=result["stateId"],
             goals=[Goal.sentence(expr)],
             _sentinel=self.to_remove_goal_states,
         )
 
-    def goal_tactic(self, state: GoalState, goal_id: int, tactic: Tactic) -> GoalState:
+    goal_start = to_sync(goal_start_async)
+
+    async def goal_tactic_async(self, state: GoalState, goal_id: int, tactic: Tactic) -> GoalState:
         """
         Execute a tactic on `goal_id` of `state`
         """
@@ -200,70 +257,78 @@ class Server:
             args["calc"] = tactic.step
         else:
             raise RuntimeError(f"Invalid tactic type: {tactic}")
-        result = self.run('goal.tactic', args)
+        result = await self.run_async('goal.tactic', args)
         if "error" in result:
-            raise ServerError(result["desc"])
+            raise ServerError(result)
         if "tacticErrors" in result:
-            raise TacticFailure(result["tacticErrors"])
+            raise TacticFailure(result)
         if "parseError" in result:
-            raise TacticFailure(result["parseError"])
+            raise TacticFailure(result)
         return GoalState.parse(result, self.to_remove_goal_states)
 
-    def goal_conv_begin(self, state: GoalState, goal_id: int) -> GoalState:
+    goal_tactic = to_sync(goal_tactic_async)
+
+    async def goal_conv_begin_async(self, state: GoalState, goal_id: int) -> GoalState:
         """
         Start conversion tactic mode on one goal
         """
-        result = self.run('goal.tactic', {"stateId": state.state_id, "goalId": goal_id, "conv": True})
+        result = await self.run_async('goal.tactic', {"stateId": state.state_id, "goalId": goal_id, "conv": True})
         if "error" in result:
-            raise ServerError(result["desc"])
+            raise ServerError(result)
         if "tacticErrors" in result:
-            raise ServerError(result["tacticErrors"])
+            raise ServerError(result)
         if "parseError" in result:
-            raise ServerError(result["parseError"])
+            raise ServerError(result)
         return GoalState.parse(result, self.to_remove_goal_states)
 
-    def goal_conv_end(self, state: GoalState) -> GoalState:
+    goal_conv_begin = to_sync(goal_conv_begin_async)
+
+    async def goal_conv_end_async(self, state: GoalState) -> GoalState:
         """
         Exit conversion tactic mode on all goals
         """
-        result = self.run('goal.tactic', {"stateId": state.state_id, "goalId": 0, "conv": False})
+        result = await self.run_async('goal.tactic', {"stateId": state.state_id, "goalId": 0, "conv": False})
         if "error" in result:
-            raise ServerError(result["desc"])
+            raise ServerError(result)
         if "tacticErrors" in result:
-            raise ServerError(result["tacticErrors"])
+            raise ServerError(result)
         if "parseError" in result:
-            raise ServerError(result["parseError"])
+            raise ServerError(result)
         return GoalState.parse(result, self.to_remove_goal_states)
 
-    def tactic_invocations(self, file_name: Union[str, Path]) -> list[CompilationUnit]:
+    goal_conv_end = to_sync(goal_conv_end_async)
+
+    async def tactic_invocations_async(self, file_name: Union[str, Path]) -> List[CompilationUnit]:
         """
         Collect tactic invocation points in file, and return them.
         """
-        result = self.run('frontend.process', {
+        result = await self.run_async('frontend.process', {
             'fileName': str(file_name),
             'invocations': True,
             "sorrys": False,
             "newConstants": False,
         })
         if "error" in result:
-            raise ServerError(result["desc"])
+            raise ServerError(result)
 
         units = [CompilationUnit.parse(payload) for payload in result['units']]
         return units
 
-    def load_sorry(self, content: str) -> list[CompilationUnit]:
+    tactic_invocations = to_sync(tactic_invocations_async)
+
+    async def load_sorry_async(self, content: str) -> List[CompilationUnit]:
         """
         Executes the compiler on a Lean file. For each compilation unit, either
         return the gathered `sorry` s, or a list of messages indicating error.
         """
-        result = self.run('frontend.process', {
+        result = await self.run_async('frontend.process', {
             'file': content,
             'invocations': False,
             "sorrys": True,
             "newConstants": False,
         })
         if "error" in result:
-            raise ServerError(result["desc"])
+            raise ServerError(result)
 
         units = [
             CompilationUnit.parse(payload, goal_state_sentinel=self.to_remove_goal_states)
@@ -271,8 +336,10 @@ class Server:
         ]
         return units
 
-    def env_add(self, name: str, t: Expr, v: Expr, is_theorem: bool = True):
-        result = self.run('env.add', {
+    load_sorry = to_sync(load_sorry_async)
+
+    async def env_add_async(self, name: str, t: Expr, v: Expr, is_theorem: bool = True):
+        result = await self.run_async('env.add', {
             "name": name,
             "type": t,
             "value": v,
@@ -280,12 +347,15 @@ class Server:
         })
         if "error" in result:
             raise ServerError(result["desc"])
-    def env_inspect(
+    
+    env_add = to_sync(env_add_async)
+    
+    async def env_inspect_async(
             self,
             name: str,
             print_value: bool = False,
-            print_dependency: bool = False) -> dict:
-        result = self.run('env.inspect', {
+            print_dependency: bool = False) -> Dict:
+        result = await self.run_async('env.inspect', {
             "name": name,
             "value": print_value,
             "dependency": print_dependency,
@@ -293,41 +363,51 @@ class Server:
         if "error" in result:
             raise ServerError(result["desc"])
         return result
+    env_inspect = to_sync(env_inspect_async)
 
-    def env_save(self, path: str):
-        result = self.run('env.save', {
+    async def env_save_async(self, path: str):
+        result = await self.run_async('env.save', {
             "path": path,
         })
         if "error" in result:
             raise ServerError(result["desc"])
-    def env_load(self, path: str):
-        result = self.run('env.load', {
+    env_save = to_sync(env_save_async)
+    
+    async def env_load_async(self, path: str):
+        result = await self.run_async('env.load', {
             "path": path,
         })
         if "error" in result:
             raise ServerError(result["desc"])
+    
+    env_load = to_sync(env_load_async)
 
-    def goal_save(self, goal_state: GoalState, path: str):
-        result = self.run('goal.save', {
+    async def goal_save_async(self, goal_state: GoalState, path: str):
+        result = await self.run_async('goal.save', {
             "id": goal_state.state_id,
             "path": path,
         })
         if "error" in result:
             raise ServerError(result["desc"])
-    def goal_load(self, path: str) -> GoalState:
-        result = self.run('goal.load', {
+    
+    goal_save = to_sync(goal_save_async)
+    
+    async def goal_load_async(self, path: str) -> GoalState:
+        result = await self.run_async('goal.load', {
             "path": path,
         })
         if "error" in result:
             raise ServerError(result["desc"])
         state_id = result['id']
-        result = self.run('goal.print', {
+        result = await self.run_async('goal.print', {
             'stateId': state_id,
             'goals': True,
         })
         if "error" in result:
             raise ServerError(result["desc"])
         return GoalState.parse_inner(state_id, result['goals'], self.to_remove_goal_states)
+    
+    goal_load = to_sync(goal_load_async)
 
 
 def get_version():
@@ -339,6 +419,20 @@ def get_version():
 
 
 class TestServer(unittest.TestCase):
+
+    def test_server_init_del(self):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", ResourceWarning)
+            server = Server()
+            t = server.expr_type("forall (n m: Nat), n + m = m + n")
+            del server
+            server = Server()
+            t = server.expr_type("forall (n m: Nat), n + m = m + n")
+            del server
+            server = Server()
+            t = server.expr_type("forall (n m: Nat), n + m = m + n")
+            del server
 
     def test_version(self):
         self.assertEqual(get_version(), "0.2.23")
