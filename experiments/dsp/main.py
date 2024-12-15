@@ -1,4 +1,5 @@
 import sys, os, json, subprocess, time, datetime
+from abc import abstractmethod
 from pathlib import Path
 from dataclasses import asdict
 from typing import Union, Any, Tuple, Optional
@@ -37,6 +38,13 @@ class Engine:
         pass
 
     def __call__(self, *args, **kwards):
+        pass
+
+    @abstractmethod
+    def sample_draft(self, prompt: str):
+        pass
+    @abstractmethod
+    def sample_sketch(self, prompt: str):
         pass
 
 class OpenAI_DSP_Engine(Engine):
@@ -88,6 +96,7 @@ class OpenAI_DSP_Engine(Engine):
 
     def sample_draft(self, prompt: str):
         extra = {} if self.model.startswith("o1") else dict(
+            seed=0,
             temperature=self.draft_sampling_params.temperature,
             top_p=self.draft_sampling_params.top_p,
             stop=self.draft_sampling_params.stop[:3],
@@ -103,6 +112,7 @@ class OpenAI_DSP_Engine(Engine):
         )
     def sample_sketch(self, prompt: str):
         extra = {} if self.model.startswith("o1") else dict(
+            seed=0,
             temperature=self.sketch_sampling_params.temperature,
             top_p=self.sketch_sampling_params.top_p,
         )
@@ -255,14 +265,20 @@ def single_proof_search_dsp_lean(
     ) -> DatumResult:
 
     start_time = time.time()
-    # -- Draft: [y_nl_pred_draft]_n ~ draft(eng, x_nl_prob, P_draft)
-    y_nl_pred_drafts = step_draft(eng, datum)
+    try:
+        # -- Draft: [y_nl_pred_draft]_n ~ draft(eng, x_nl_prob, P_draft)
+        y_nl_pred_drafts = step_draft(eng, datum)
 
-    # -- Sketch: z_fl_pred_sketch ~ sketch(eng, x_nl_prob, [y_nl_pred_draft]_n, x_fl_prob, P_sketch)
-    z_fl_pred_sketches, x_fl_prob = step_sketch(eng, datum, y_nl_pred_drafts)
+        # -- Sketch: z_fl_pred_sketch ~ sketch(eng, x_nl_prob, [y_nl_pred_draft]_n, x_fl_prob, P_sketch)
+        z_fl_pred_sketches, x_fl_prob = step_sketch(eng, datum, y_nl_pred_drafts)
 
-    assert len(z_fl_pred_sketches) == eng.sketch_sampling_params.n
-
+        assert len(z_fl_pred_sketches) == eng.sketch_sampling_params.n
+    except Exception as e:
+        print(colored(f"Failed to create sketch/draft: {e}", "red"))
+        return DatumResult(
+            name=str(datum),
+            error=str(e),
+        )
 
     results = []
     success = False
@@ -278,12 +294,20 @@ def single_proof_search_dsp_lean(
                 name=str(datum),
                 error=str(e),
             )
-        # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
-        prove_result = step_prove(eng, server, x_fl_prob, sketch)
-        results.append(prove_result)
-        if isinstance(prove_result, SearchResult) and prove_result.success:
-            success = True
-            break
+        try:
+            # -- Prove: y_fl = prove(eng, x_fl_prob, z_fl_pred_sketches)
+            prove_result = step_prove(eng, server, x_fl_prob, sketch)
+            results.append(prove_result)
+            if isinstance(prove_result, SearchResult) and prove_result.success:
+                success = True
+                break
+        except Exception as e:
+            print(colored(f"Search failed: {e}", "red"))
+            return DatumResult(
+                name=str(datum),
+                error=str(e),
+            )
+
     duration = time.time() - start_time
 
     return DatumResult(
@@ -329,11 +353,6 @@ def full_proof_search_dsp_lean(
 
 experiment_dir = Path(__file__).resolve().parent
 
-def get_project_and_lean_path():
-    cwd = experiment_dir / 'lean_src_proj'
-    p = subprocess.check_output(['lake', 'env', 'printenv', 'LEAN_PATH'], cwd=cwd)
-    return cwd, p
-
 def load_data(args) -> list[Datum]:
     p = Path(args.dataset).expanduser()
     data = None
@@ -363,13 +382,21 @@ def main(args):
     path_output = Path(args.output)
     path_output.mkdir(exist_ok=True, parents=True)
 
+    project_path = experiment_dir / 'lean_src_proj'
+
+    print("Building src project ...")
+    while True:
+        # Lean sometimes fails to build. Try until it succeeds.
+        completion = subprocess.run(['lake', 'build'], cwd=project_path, check=False)
+        if completion.returncode == 0:
+            break;
+    print("Built src project")
+
     # Start server
-    project_path, lean_path = get_project_and_lean_path()
     def server_func():
         return Server(
             imports=["Mathlib", "Aesop"],
             project_path=project_path,
-            lean_path=lean_path,
             core_options=DEFAULT_CORE_OPTIONS,
         )
 

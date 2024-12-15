@@ -34,6 +34,7 @@ termcolor = "^2.4.0"
 matplotlib = "^3.9.2"
 seaborn = "^0.13.2"
 pandas = "^2.2.3"
+git-archive-all = "^1.23.1"
 
 [tool.poetry.group.doc]
 optional = true
