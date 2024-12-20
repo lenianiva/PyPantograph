@@ -16,6 +16,10 @@ MINIF2F_TEST_FILE = PROJECT_ROOT / 'experiments/minif2f/test.jsonl'
 MINIF2F_ROOT = PROJECT_ROOT / 'experiments/minif2f/MiniF2F'
 
 @pytest.fixture
+def minif2f_root():
+    return MINIF2F_ROOT
+
+@pytest.fixture
 def minif2f_valid():
     return pd.read_json(MINIF2F_VALID_FILE, lines=True)
 
