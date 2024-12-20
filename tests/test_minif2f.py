@@ -65,18 +65,19 @@ def test_load_theorem(minif2f_server: Server, minif2f_test: DataFrame, minif2f_v
     total_test = len(minif2f_test)
     failed_valid_count = len(failed_valid)
     failed_test_count = len(failed_test)
-    
     logger.info(f"""
     Test Summary:
     Valid theorems: {total_valid - failed_valid_count}/{total_valid} passed
     Test theorems: {total_test - failed_test_count}/{total_test} passed
     """)
-    
     # Detailed failure report
     if failed_valid:
         logger.error(f"Failed valid theorems: {failed_valid}")
     if failed_test:
         logger.error(f"Failed test theorems: {failed_test}")
-    # Final assertions
     assert not failed_valid, f"{failed_valid_count} valid theorems failed"
     assert not failed_test, f"{failed_test_count} test theorems failed"
+
+@pytest.mark.advance
+def test_advance_cases():
+    pass
