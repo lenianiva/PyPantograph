@@ -1,0 +1,1 @@
+"""Test for special tactics, such as have, let, etc."""

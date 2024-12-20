@@ -1,4 +1,5 @@
-import pandas as pd
+"""Test cases for the minif2f experiment."""
+
 from pandas import DataFrame, Series
 from pantograph import Server
 from tqdm import tqdm
@@ -37,9 +38,11 @@ def test_single_case(minif2f_server: Server, minif2f_test: DataFrame):
         logger.error(f"Single case test failed with message: {message}")
     assert is_valid, f"Failed to load theorem: {message}"
 
-@pytest.mark.basic
+@pytest.mark.advance
 def test_load_theorem(minif2f_server: Server, minif2f_test: DataFrame, minif2f_valid: DataFrame):
-    """Comprehensive test for loading multiple theorems."""
+    """Comprehensive test for loading multiple theorems.
+    use pytest -m "not advance" to skip this test.
+    """
     logger.info("Theorem loading test")
     # Test valid theorems
     logger.info("Testing valid theorems...")
@@ -71,12 +74,12 @@ def test_load_theorem(minif2f_server: Server, minif2f_test: DataFrame, minif2f_v
     Test theorems: {total_test - failed_test_count}/{total_test} passed
     """)
     # Detailed failure report
-    if failed_valid:
-        logger.error(f"Failed valid theorems: {failed_valid}")
-    if failed_test:
-        logger.error(f"Failed test theorems: {failed_test}")
-    assert not failed_valid, f"{failed_valid_count} valid theorems failed"
-    assert not failed_test, f"{failed_test_count} test theorems failed"
+    if failed_valid or failed_test:
+        if failed_valid:
+            err_msg = f"Failed valid theorems: {failed_valid}"
+        if failed_test:
+            err_msg += f"\nFailed test theorems: {failed_test}"
+        raise AssertionError(err_msg)
 
 @pytest.mark.advance
 def test_advance_cases():

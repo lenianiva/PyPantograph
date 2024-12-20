@@ -7,6 +7,7 @@ logger.remove()
 LOGGER_FORMAT = "<green>{level}</green> | <lvl>{message}</lvl>"
 logger.add(lambda msg: print(msg, end=''), format=LOGGER_FORMAT, colorize=True)
 
+# Project root
 PROJECT_ROOT = Path(__file__).parent.parent
 
 # Experiment for MiniF2F
