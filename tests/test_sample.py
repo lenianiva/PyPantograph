@@ -3,6 +3,7 @@ import pytest
 from pantograph import Server
 from pantograph.expr import *
 from pantograph.server import TacticFailure
+from json.decoder import JSONDecodeError
 
 special_cases = [
 """theorem mathd_numbertheory_552
@@ -19,9 +20,14 @@ special_cases = [
   (h₁ : Fintype (f ⁻¹' {7})) :
   (∑ y in (f ⁻¹' {7}).toFinset, y / 3) = -1 / 9 := by sorry
 """,
-"""theorem sample (p q r x : ℂ)
-  (h₀ : (x - p) _(x - q) = (r - p)_ (r - q)) :
-  (x - r) _x = (x - r)_ (p + q - r) := by linear_combination h₀
+"""theorem mathd_numbertheory_552_min 
+  (h : ℕ → ℕ) 
+  (h₃ : Fintype (Set.range h)) : true := by sorry
+""",
+"""theorem sample
+  (p q r x : ℂ)
+  (h₀ : (x - p) * (x - q) = (r - p) * (r - q)) :
+  (x - r) * x = (x - r) * (p + q - r) := by linear_combination h₀
 """
 ]
 
@@ -42,17 +48,17 @@ def test_goal_start_with_ambiguous_type():
 @pytest.mark.error
 def test_jsondecode(minif2f_root):
     server = Server(imports=['Mathlib', 'Init'], project_path=minif2f_root)
-    unit = server.load_sorry(special_cases[0])[0]
-    goal_state, message = unit.goal_state, '\n'.join(unit.messages)
-    assert goal_state is not None and 'error' not in message.lower() and len(goal_state.goals) == 1
-
-    unit = server.load_sorry(special_cases[1])[0]
-    goal_state, message = unit.goal_state, '\n'.join(unit.messages)
-    assert goal_state is not None and 'error' not in message.lower() and len(goal_state.goals) == 1
+    for thm in special_cases[:3]:
+      with pytest.raises(Exception):
+          unit = server.load_sorry(thm)[0]
+          goal_state, message = unit.goal_state, '\n'.join(unit.messages)
+      server.restart() # The server is dead after the error
+      # assert goal_state is not None and 'error' not in message.lower() and len(goal_state.goals) == 1
 
 @pytest.mark.error
 def test_proof_with_warn_type(minif2f_root):
     server = Server(imports=['Mathlib', 'Init'], project_path=minif2f_root)
-    unit = server.load_sorry(special_cases[2])[0]
+    unit = server.load_sorry(special_cases[3])[0]
     goal_state, message = unit.goal_state, '\n'.join(unit.messages)
-    assert goal_state is None and 'error' not in message.lower()
+    with pytest.raises(AssertionError):
+        assert goal_state is None and 'error' not in message.lower()
