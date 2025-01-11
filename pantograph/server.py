@@ -261,6 +261,7 @@ class Server:
             'invocations': False,
             "sorrys": True,
             "newConstants": False,
+            "typeErrorsAsGoals": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
@@ -277,6 +278,7 @@ class Server:
             "type": t,
             "value": v,
             "isTheorem": is_theorem,
+            "typeErrorsAsGoals": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
@@ -289,6 +291,7 @@ class Server:
             "name": name,
             "value": print_value,
             "dependency": print_dependency,
+            "source": True,
         })
         if "error" in result:
             raise ServerError(result["desc"])
