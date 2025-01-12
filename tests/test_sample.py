@@ -55,10 +55,8 @@ def test_jsondecode(minif2f_root):
       server.restart() # The server is dead after the error
       # assert goal_state is not None and 'error' not in message.lower() and len(goal_state.goals) == 1
 
-@pytest.mark.error
 def test_proof_with_warn_type(minif2f_root):
     server = Server(imports=['Mathlib', 'Init'], project_path=minif2f_root)
     unit = server.load_sorry(special_cases[3])[0]
     goal_state, message = unit.goal_state, '\n'.join(unit.messages)
-    with pytest.raises(AssertionError):
-        assert goal_state is None and 'error' not in message.lower()
+    assert goal_state is None and 'error' not in message.lower()

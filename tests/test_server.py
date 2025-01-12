@@ -3,7 +3,9 @@ from pantograph.server import get_version
 from pantograph.expr import Goal, Variable, TacticHave, TacticLet, TacticCalc
 
 def test_version():
-    assert get_version() == "0.2.23"
+    # assert get_version() == "0.2.23"
+    assert get_version() == "0.2.24"
+    pass
 
 def test_expr_type():
     server = Server()
