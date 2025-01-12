@@ -5,26 +5,8 @@ from pantograph import Server
 from tqdm import tqdm
 import pytest
 from loguru import logger
+from .utils import verify_theorem_loading
 
-default_header = """
-set_option maxHeartbeats 0
-open BigOperators Real Nat Topology Rat
-"""
-
-def verify_theorem_loading(server: Server, theorem: str) -> tuple[bool, str]:
-    """Helper function to verify theorem loading."""
-    try:
-        unit = server.load_sorry(f"{default_header}\n{theorem}")[2]
-        goal_state, message = unit.goal_state, '\n'.join(unit.messages)
-        is_valid = (
-            goal_state is not None and 
-            len(goal_state.goals) == 1 and 
-            'error' not in message.lower()
-        )
-        return is_valid, message
-    except Exception as e:
-        logger.error(f"Exception while loading theorem: {e}")
-        return False, str(e)
 
 @pytest.mark.basic
 def test_single_case(minif2f_server: Server, minif2f_test: DataFrame):
@@ -53,6 +35,7 @@ def test_load_theorem(minif2f_server: Server, minif2f_test: DataFrame, minif2f_v
         is_valid, _ = verify_theorem_loading(minif2f_server, theorem)
         if not is_valid:
             failed_valid.append(i)
+            minif2f_server.restart()
     # Test test theorems
     logger.info("Testing test theorems...")
     failed_test = []
@@ -62,6 +45,7 @@ def test_load_theorem(minif2f_server: Server, minif2f_test: DataFrame, minif2f_v
         is_valid, _ = verify_theorem_loading(minif2f_server, theorem)
         if not is_valid:
             failed_test.append(i)
+            minif2f_server.restart()
     
     # Report results
     total_valid = len(minif2f_valid)
@@ -80,7 +64,3 @@ def test_load_theorem(minif2f_server: Server, minif2f_test: DataFrame, minif2f_v
         if failed_test:
             err_msg += f"\nFailed test theorems: {failed_test}"
         raise AssertionError(err_msg)
-
-@pytest.mark.advance
-def test_advance_cases():
-    pass
