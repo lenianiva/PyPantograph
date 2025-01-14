@@ -1,6 +1,0 @@
-{
-    "problem": "How many vertical asymptotes does 1/x have around 0 from the right?",
-    "level": "Level 2",
-    "type": "Algebra",
-    "solution": "$1/x$ goes to positive infinity from the right as $x$ goes to zero and nowhere else, so it has $\\boxed{1}$ veritcal asymptote." 
-}

@@ -3,7 +3,7 @@ name = "pantograph"
 version = "0.2.24"
 description = "A machine-to-machine interaction system for Lean"
 authors = ["Leni Aniva <v@leni.sh>"]
-license = "GPL-3"
+license = "Apache-2.0"
 readme = "README.md"
 
 include = [
@@ -13,31 +13,16 @@ include = [
 
 [tool.poetry.dependencies]
 pexpect = "^4.9.0"
-python = "~=3.12"
+python = ">=3.9.0"
 
 [tool.poetry.build]
 generate-setup-file = false
 script = "build.py"
 
-[tool.poetry.group.dev.dependencies]
-# Experiment related dependencies here to not clutter the main project dependencies.
-notebook = "^7.2.1"
-numpy = "^1.26.4"
-openai = "^1.31.0"
-sglang = "^0.1.16"
-tenacity = "8.3.0"
-tiktoken = "^0.7.0"
-torch = "2.2.1"
-wandb = "0.17.0"
-termcolor = "^2.4.0"
-# vllm = "0.4.1"
-matplotlib = "^3.9.2"
-seaborn = "^0.13.2"
-pandas = "^2.2.3"
-
 [tool.poetry.group.doc]
 optional = true
 [tool.poetry.group.doc.dependencies]
+notebook = "^7.2.1"
 jupyter-book = "^1.0.3"
 
 [build-system]
