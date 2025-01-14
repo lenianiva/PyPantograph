@@ -328,6 +328,7 @@ class Server:
             'invocations': False,
             "sorrys": True,
             "newConstants": False,
+            "typeErrorsAsGoals": False,
         })
         if "error" in result:
             raise ServerError(result)
@@ -346,6 +347,7 @@ class Server:
             "type": t,
             "value": v,
             "isTheorem": is_theorem,
+            "typeErrorsAsGoals": False,
         })
         if "error" in result:
             raise ServerError(result["desc"])
@@ -361,6 +363,7 @@ class Server:
             "name": name,
             "value": print_value,
             "dependency": print_dependency,
+            "source": True,
         })
         if "error" in result:
             raise ServerError(result["desc"])
@@ -423,7 +426,7 @@ def get_version():
 class TestServer(unittest.TestCase):
     
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.23")
+        self.assertEqual(get_version(), "0.2.24")
 
     def test_server_init_del(self):
         import warnings

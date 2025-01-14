@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pantograph"
-version = "0.2.23"
+version = "0.2.24"
 description = "A machine-to-machine interaction system for Lean"
 authors = ["Leni Aniva <v@leni.sh>"]
 license = "GPL-3"
@@ -13,7 +13,7 @@ include = [
 
 [tool.poetry.dependencies]
 pexpect = "^4.9.0"
-python = "^3.10"
+python = "~=3.12"
 
 [tool.poetry.build]
 generate-setup-file = false
