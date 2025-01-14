@@ -125,7 +125,7 @@ class Server:
         :meta private:
         """
         assert self.proc
-        s = json.dumps(payload)
+        s = json.dumps(payload, ensure_ascii=False)
         self.proc.sendline(f"{cmd} {s}")
         try:
             line = self.proc.readline()
