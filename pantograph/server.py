@@ -344,7 +344,7 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.24")
+        self.assertEqual(get_version(), "0.2.25/v4.16.0-rc1")
 
     def test_expr_type(self):
         server = Server()
