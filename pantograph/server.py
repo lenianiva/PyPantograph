@@ -82,15 +82,16 @@ class Server:
 
     @classmethod
     async def create(cls,
-                 imports=["Init"],
-                 project_path=None,
-                 lean_path=None,
+                 imports: List[str]=["Init"],
+                 project_path: Optional[str]=None,
+                 lean_path: Optional[str]=None,
                  # Options for executing the REPL.
                  # Set `{ "automaticMode" : False }` to handle resumption by yourself.
-                 options={},
-                 core_options=DEFAULT_CORE_OPTIONS,
-                 timeout=120,
-                 maxread=1000000) -> 'Server':
+                 options: Dict[str, Any]={},
+                 core_options: List[str]=DEFAULT_CORE_OPTIONS,
+                 timeout: int=120,
+                 maxread: int=1000000,
+                 start:bool=True) -> 'Server':
         """
         timeout: Amount of time to wait for execution
         maxread: Maximum number of characters to read (especially important for large proofs and catalogs)
@@ -108,7 +109,8 @@ class Server:
         if project_path and not lean_path:
             lean_path = await get_lean_path_async(project_path)
         self.lean_path = lean_path
-        await self.restart_async()
+        if start:
+            await self.restart_async()
         return self
 
     def __enter__(self) -> "Server":
@@ -119,7 +121,7 @@ class Server:
 
     def __del__(self):
         self._close()
-
+    
     def _close(self):
         if self.proc is not None:
             try:
@@ -419,6 +421,9 @@ def get_version():
 
 
 class TestServer(unittest.TestCase):
+    
+    def test_version(self):
+        self.assertEqual(get_version(), "0.2.23")
 
     def test_server_init_del(self):
         import warnings
@@ -433,9 +438,6 @@ class TestServer(unittest.TestCase):
             server = Server()
             t = server.expr_type("forall (n m: Nat), n + m = m + n")
             del server
-
-    def test_version(self):
-        self.assertEqual(get_version(), "0.2.23")
 
     def test_expr_type(self):
         server = Server()
