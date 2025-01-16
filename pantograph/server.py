@@ -121,7 +121,7 @@ class Server:
 
     def __del__(self):
         self._close()
-    
+
     def _close(self):
         if self.proc is not None:
             try:
@@ -351,9 +351,9 @@ class Server:
         })
         if "error" in result:
             raise ServerError(result["desc"])
-    
+
     env_add = to_sync(env_add_async)
-    
+
     async def env_inspect_async(
             self,
             name: str,
@@ -377,14 +377,14 @@ class Server:
         if "error" in result:
             raise ServerError(result["desc"])
     env_save = to_sync(env_save_async)
-    
+
     async def env_load_async(self, path: str):
         result = await self.run_async('env.load', {
             "path": path,
         })
         if "error" in result:
             raise ServerError(result["desc"])
-    
+
     env_load = to_sync(env_load_async)
 
     async def goal_save_async(self, goal_state: GoalState, path: str):
@@ -394,9 +394,9 @@ class Server:
         })
         if "error" in result:
             raise ServerError(result["desc"])
-    
+
     goal_save = to_sync(goal_save_async)
-    
+
     async def goal_load_async(self, path: str) -> GoalState:
         result = await self.run_async('goal.load', {
             "path": path,
@@ -411,7 +411,7 @@ class Server:
         if "error" in result:
             raise ServerError(result["desc"])
         return GoalState.parse_inner(state_id, result['goals'], self.to_remove_goal_states)
-    
+
     goal_load = to_sync(goal_load_async)
 
 
@@ -424,7 +424,7 @@ def get_version():
 
 
 class TestServer(unittest.TestCase):
-    
+
     def test_version(self):
         self.assertEqual(get_version(), "0.2.24")
 

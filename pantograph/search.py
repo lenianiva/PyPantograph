@@ -2,7 +2,7 @@ import random
 from abc import abstractmethod
 import time
 from dataclasses import dataclass
-from typing import  Optional, Self, List
+from typing import Optional, List
 import collections, unittest
 from math import log, sqrt
 from pantograph.server import Server, TacticFailure, ServerError
@@ -13,10 +13,10 @@ from pantograph.expr import Expr, Tactic, GoalState
 class SearchState:
 
     goal_state: GoalState
-    parent: Optional[Self]
+    parent: Optional["SearchState"]
     parent_goal_id: Optional[int]
     priorities: list[float]
-    children: Optional[List[Self]] = None
+    children: Optional[List["SearchState"]] = None
     tested_tactics: Optional[List[Tactic]] = None
     total_value: Optional[float] = None
     tactic_feedback: Optional[str] = None
