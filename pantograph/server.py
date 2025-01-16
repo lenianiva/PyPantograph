@@ -16,6 +16,7 @@ from pantograph.expr import (
     TacticLet,
     TacticCalc,
     TacticExpr,
+    TacticDraft,
 )
 from pantograph.data import CompilationUnit
 
@@ -194,10 +195,12 @@ class Server:
             args["let"] = tactic.branch
             if tactic.binder_name:
                 args["binderName"] = tactic.binder_name
-        elif isinstance(tactic, TacticExpr):
-            args["expr"] = tactic.expr
         elif isinstance(tactic, TacticCalc):
             args["calc"] = tactic.step
+        elif isinstance(tactic, TacticExpr):
+            args["expr"] = tactic.expr
+        elif isinstance(tactic, TacticDraft):
+            args["draft"] = tactic.expr
         else:
             raise RuntimeError(f"Invalid tactic type: {tactic}")
         result = self.run('goal.tactic', args)
@@ -507,6 +510,22 @@ class TestServer(unittest.TestCase):
         state1 = server.goal_tactic(state0, goal_id=0, tactic="intro h")
         state2 = server.goal_tactic(state1, goal_id=0, tactic="exact h")
         self.assertTrue(state2.is_solved)
+
+        state1b = server.goal_tactic(state0, goal_id=0, tactic=TacticDraft("by\nhave h1 : Or p p := sorry\nsorry"))
+        self.assertEqual(state1b.goals, [
+            Goal(
+                [Variable(name="p", t="Prop")],
+                target="p ∨ p",
+            ),
+            Goal(
+                [
+                    Variable(name="p", t="Prop"),
+                    Variable(name="h1", t="p ∨ p"),
+                ],
+                target="p → p",
+            ),
+        ])
+
 
     def test_env_add_inspect(self):
         server = Server()
