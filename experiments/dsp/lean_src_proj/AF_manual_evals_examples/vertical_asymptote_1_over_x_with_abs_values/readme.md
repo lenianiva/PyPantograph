@@ -1,7 +1,0 @@
-#
-
-## Appendix
-
-### Questions:
-
-Q: 
