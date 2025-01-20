@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 
 from pantograph.server import Server
+from pantograph.expr import TacticDraft
+
+root = """
+theorem add_comm_proved_formal_sketch : ∀ n m : Nat, n + m = m + n := sorry
+"""
 
 sketch = """
-theorem add_comm_proved_formal_sketch : ∀ n m : Nat, n + m = m + n := by
+by
    -- Consider some n and m in Nats.
    intros n m
    -- Perform induction on n.
@@ -32,5 +37,8 @@ theorem add_comm_proved_formal_sketch : ∀ n m : Nat, n + m = m + n := by
 
 if __name__ == '__main__':
     server = Server()
-    unit, = server.load_sorry(sketch)
+    unit, = server.load_sorry(root)
     print(unit.goal_state)
+
+    sketch = server.goal_tactic(unit.goal_state, 0, TacticDraft(sketch))
+    print(sketch)
