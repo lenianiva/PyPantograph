@@ -300,6 +300,17 @@ class Server:
         if "error" in result:
             raise ServerError(result["desc"])
         return result
+    def env_module_read(self, module: str) -> dict:
+        """
+        Reads the content from one Lean module including what constants are in
+        it.
+        """
+        result = self.run('env.module_read', {
+            "module": module
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return result
 
     def env_save(self, path: str):
         result = self.run('env.save', {
