@@ -13,7 +13,7 @@ import regex as re
 def to_sync(func):
     @F.wraps(func)
     def wrapper(*args, **kwargs):
-        return asyncio.get_event_loop().run_until_complete(func(*args, **kwargs))
+        return asyncio.run(func(*args, **kwargs))
     return wrapper
 
 async def check_output(*args, **kwargs):
