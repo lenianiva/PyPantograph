@@ -83,6 +83,8 @@ class Spwan(pexpect.spawn):
         This looks for a newline as a CR/LF pair (\\r\\n) even on UNIX because
         this is what the pseudotty device returns. So contrary to what you may
         expect you will receive newlines as \\r\\n.
+        See https://pexpect.readthedocs.io/en/latest/overview.html#find-the-end-of-line-cr-lf-conventions
+        for more information.
 
         If the size argument is 0 then an empty string is returned. In all
         other cases the size argument is ignored, which is not standard
@@ -90,8 +92,13 @@ class Spwan(pexpect.spawn):
 
         if size == 0:
             return self.string_type()
-        # delimiter default is EOF
-        index = await self.expect([self.crlf, self.delimiter], async_=True)
+
+        def blocking_expect():
+            # We use `asyncio.to_thread` because passing `async_=True` to `expect()` sometimes hangs. See e.g.:
+            # https://stackoverflow.com/questions/12647212/why-is-pexpect-intermittently-hanging-not-detecting-eof-after-executing-certai
+            return self.expect([self.crlf, self.delimiter])
+
+        index = await asyncio.to_thread(blocking_expect)
         if index == 0:
             return self.before + self.crlf
         else:
