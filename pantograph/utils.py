@@ -7,7 +7,7 @@ import collections as C
 import functools as F
 
 import pexpect
-import regex as re
+import re
 
 
 def to_sync(func):
@@ -18,7 +18,7 @@ def to_sync(func):
 
 async def check_output(*args, **kwargs):
     p = await asyncio.create_subprocess_exec(
-        *args, 
+        *args,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         **kwargs,
