@@ -1,0 +1,38 @@
+name: Unit Tests
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install elan
+      run: |
+        set -o pipefail
+        curl -sSfL https://github.com/leanprover/elan/releases/download/v3.1.1/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+        ./elan-init -y --default-toolchain none
+        echo "$HOME/.elan/bin" >> "${GITHUB_PATH}"
+
+    - name: Install Lean
+      run: |
+        elan toolchain install $(<src/lean-toolchain)
+
+    - name: Install poetry
+      run: |
+        pip install poetry
+        poetry install --only doc
+    - name: Run tests
+      run: |
+          poetry run python3 -m pantograph.server
+          poetry run python3 -m pantograph.search
