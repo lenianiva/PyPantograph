@@ -44,7 +44,9 @@ class ServerError(Exception):
 
 class Server:
     """
-    Main interaction instance with Pantograph
+    Main interaction instance with Pantograph.
+
+    Asynchronous and synchronous versions are provided for each function.
     """
 
     def __init__(self,
@@ -354,6 +356,12 @@ class Server:
     load_sorry = to_sync(load_sorry_async)
 
     async def env_add_async(self, name: str, t: Expr, v: Expr, is_theorem: bool = True):
+        """
+        Adds a definition to the environment.
+
+        NOTE: May have to accept additional parameters if the definition
+        contains universe mvars.
+        """
         result = await self.run_async('env.add', {
             "name": name,
             "type": t,
@@ -371,6 +379,9 @@ class Server:
             name: str,
             print_value: bool = False,
             print_dependency: bool = False) -> Dict:
+        """
+        Print the type and dependencies of a constant.
+        """
         result = await self.run_async('env.inspect', {
             "name": name,
             "value": print_value,
@@ -396,6 +407,9 @@ class Server:
     env_module_read = to_sync(env_module_read_async)
 
     async def env_save_async(self, path: str):
+        """
+        Save the current environment to a file
+        """
         result = await self.run_async('env.save', {
             "path": path,
         })
@@ -404,6 +418,9 @@ class Server:
     env_save = to_sync(env_save_async)
 
     async def env_load_async(self, path: str):
+        """
+        Load the current environment from a file
+        """
         result = await self.run_async('env.load', {
             "path": path,
         })
@@ -413,6 +430,9 @@ class Server:
     env_load = to_sync(env_load_async)
 
     async def goal_save_async(self, goal_state: GoalState, path: str):
+        """
+        Save a goal state to a file
+        """
         result = await self.run_async('goal.save', {
             "id": goal_state.state_id,
             "path": path,
@@ -423,6 +443,11 @@ class Server:
     goal_save = to_sync(goal_save_async)
 
     async def goal_load_async(self, path: str) -> GoalState:
+        """
+        Load a goal state from a file.
+
+        User is responsible for keeping track of the environment.
+        """
         result = await self.run_async('goal.load', {
             "path": path,
         })
@@ -440,7 +465,10 @@ class Server:
     goal_load = to_sync(goal_load_async)
 
 
-def get_version():
+def get_version() -> str:
+    """
+    Returns the current Pantograph version for diagnostics purposes.
+    """
     import subprocess
     with subprocess.Popen([_get_proc_path(), "--version"],
                           stdout=subprocess.PIPE,
@@ -451,6 +479,9 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
+        """
+        NOTE: Update this after upstream updates.
+        """
         self.assertEqual(get_version(), "0.2.25")
 
     def test_server_init_del(self):
