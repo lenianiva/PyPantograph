@@ -54,11 +54,11 @@ class Server:
                  # Set `{ "automaticMode" : False }` to handle resumption by yourself.
                  options: Dict[str, Any]={},
                  core_options: List[str]=DEFAULT_CORE_OPTIONS,
-                 timeout: int=120,
+                 timeout: int=30,
                  maxread: int=1000000,
                  _sync_init: bool=True):
         """
-        timeout: Amount of time to wait for execution
+        timeout: Amount of time to wait for execution (in seconds)
         maxread: Maximum number of characters to read (especially important for large proofs and catalogs)
         """
         self.timeout = timeout
@@ -93,7 +93,7 @@ class Server:
                  maxread: int=1000000,
                  start:bool=True) -> 'Server':
         """
-        timeout: Amount of time to wait for execution
+        timeout: Amount of time to wait for execution (in seconds)
         maxread: Maximum number of characters to read (especially important for large proofs and catalogs)
         """
         self = cls(
@@ -163,19 +163,19 @@ class Server:
             raise RuntimeError("Server failed to emit ready signal in time") from exc
 
         if self.options:
-            await self.run_async("options.set", self.options)
+            await self.run_async("options.set", self.options, assert_no_error=True)
 
-        await self.run_async('options.set', {'printDependentMVars': True})
+        await self.run_async('options.set', {'printDependentMVars': True}, assert_no_error=True)
 
     restart = to_sync(restart_async)
 
-    async def run_async(self, cmd, payload):
+    async def run_async(self, cmd, payload, assert_no_error=False):
         """
         Runs a raw JSON command. Preferably use one of the commands below.
 
         :meta private:
         """
-        assert self.proc
+        assert self.proc, "Server not running."
         s = json.dumps(payload, ensure_ascii=False)
         await self.proc.sendline_async(f"{cmd} {s}")
         try:
@@ -185,15 +185,23 @@ class Server:
                 if obj.get("error") == "io":
                     # The server is dead
                     self._close()
+                if "error" in obj and assert_no_error:
+                    raise ServerError(obj)
                 return obj
             except Exception as e:
+                if self.proc.closed:
+                    raise ServerError(f"Cannot decode: '{line}'") from e
                 self.proc.sendeof()
                 remainder = await self.proc.read_async()
                 self._close()
-                raise ServerError(f"Cannot decode: {line}\n{remainder}") from e
+                raise ServerError(f"Cannot decode: '{line}\n{remainder}'") from e
         except pexpect.exceptions.TIMEOUT as exc:
             self._close()
-            return {"error": "timeout", "message": str(exc)}
+            result = {"error": "timeout", "message": str(exc)}
+            if assert_no_error:
+                raise ServerError(result) from exc
+            else:
+                return result
 
     run = to_sync(run_async)
 
