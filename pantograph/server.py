@@ -317,6 +317,7 @@ class Server:
             'invocations': True,
             "sorrys": False,
             "newConstants": False,
+            "typeErrorsAsGoals": False,
         })
         if "error" in result:
             raise ServerError(result)
