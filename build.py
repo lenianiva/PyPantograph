@@ -11,7 +11,10 @@ with subprocess.Popen(["lake", "build", "repl"], cwd=PATH_PANTOGRAPH) as p:
     p.wait()
 
 path_executable = PATH_PY / "pantograph-repl"
-shutil.copyfile(PATH_PANTOGRAPH / ".lake/build/bin/repl", path_executable)
+if os.name == 'nt': # check that the OS is Windows or not
+    shutil.copyfile(PATH_PANTOGRAPH / ".lake/build/bin/repl.exe", path_executable) 
+else:
+    shutil.copyfile(PATH_PANTOGRAPH / ".lake/build/bin/repl", path_executable)
 os.chmod(path_executable, os.stat(path_executable).st_mode | stat.S_IEXEC)
 
 # -- Copy the Lean toolchain file to the specified path
