@@ -17,6 +17,7 @@ from pantograph.expr import (
     TacticLet,
     TacticCalc,
     TacticExpr,
+    TacticDraft,
 )
 from pantograph.utils import (
     to_sync,
@@ -43,7 +44,9 @@ class ServerError(Exception):
 
 class Server:
     """
-    Main interaction instance with Pantograph
+    Main interaction instance with Pantograph.
+
+    Asynchronous and synchronous versions are provided for each function.
     """
 
     def __init__(self,
@@ -261,10 +264,12 @@ class Server:
             args["let"] = tactic.branch
             if tactic.binder_name:
                 args["binderName"] = tactic.binder_name
-        elif isinstance(tactic, TacticExpr):
-            args["expr"] = tactic.expr
         elif isinstance(tactic, TacticCalc):
             args["calc"] = tactic.step
+        elif isinstance(tactic, TacticExpr):
+            args["expr"] = tactic.expr
+        elif isinstance(tactic, TacticDraft):
+            args["draft"] = tactic.expr
         else:
             raise RuntimeError(f"Invalid tactic type: {tactic}")
         result = await self.run_async('goal.tactic', args)
@@ -351,6 +356,12 @@ class Server:
     load_sorry = to_sync(load_sorry_async)
 
     async def env_add_async(self, name: str, t: Expr, v: Expr, is_theorem: bool = True):
+        """
+        Adds a definition to the environment.
+
+        NOTE: May have to accept additional parameters if the definition
+        contains universe mvars.
+        """
         result = await self.run_async('env.add', {
             "name": name,
             "type": t,
@@ -368,6 +379,9 @@ class Server:
             name: str,
             print_value: bool = False,
             print_dependency: bool = False) -> Dict:
+        """
+        Print the type and dependencies of a constant.
+        """
         result = await self.run_async('env.inspect', {
             "name": name,
             "value": print_value,
@@ -379,7 +393,23 @@ class Server:
         return result
     env_inspect = to_sync(env_inspect_async)
 
+    async def env_module_read_async(self, module: str) -> dict:
+        """
+        Reads the content from one Lean module including what constants are in
+        it.
+        """
+        result = await self.run_async('env.module_read', {
+            "module": module
+        })
+        if "error" in result:
+            raise ServerError(result["desc"])
+        return result
+    env_module_read = to_sync(env_module_read_async)
+
     async def env_save_async(self, path: str):
+        """
+        Save the current environment to a file
+        """
         result = await self.run_async('env.save', {
             "path": path,
         })
@@ -388,6 +418,9 @@ class Server:
     env_save = to_sync(env_save_async)
 
     async def env_load_async(self, path: str):
+        """
+        Load the current environment from a file
+        """
         result = await self.run_async('env.load', {
             "path": path,
         })
@@ -397,6 +430,9 @@ class Server:
     env_load = to_sync(env_load_async)
 
     async def goal_save_async(self, goal_state: GoalState, path: str):
+        """
+        Save a goal state to a file
+        """
         result = await self.run_async('goal.save', {
             "id": goal_state.state_id,
             "path": path,
@@ -407,6 +443,11 @@ class Server:
     goal_save = to_sync(goal_save_async)
 
     async def goal_load_async(self, path: str) -> GoalState:
+        """
+        Load a goal state from a file.
+
+        User is responsible for keeping track of the environment.
+        """
         result = await self.run_async('goal.load', {
             "path": path,
         })
@@ -424,7 +465,10 @@ class Server:
     goal_load = to_sync(goal_load_async)
 
 
-def get_version():
+def get_version() -> str:
+    """
+    Returns the current Pantograph version for diagnostics purposes.
+    """
     import subprocess
     with subprocess.Popen([_get_proc_path(), "--version"],
                           stdout=subprocess.PIPE,
@@ -435,7 +479,10 @@ def get_version():
 class TestServer(unittest.TestCase):
 
     def test_version(self):
-        self.assertEqual(get_version(), "0.2.24")
+        """
+        NOTE: Update this after upstream updates.
+        """
+        self.assertEqual(get_version(), "0.2.25")
 
     def test_server_init_del(self):
         import warnings
@@ -611,6 +658,22 @@ class TestServer(unittest.TestCase):
         state1 = server.goal_tactic(state0, goal_id=0, tactic="intro h")
         state2 = server.goal_tactic(state1, goal_id=0, tactic="exact h")
         self.assertTrue(state2.is_solved)
+
+        state1b = server.goal_tactic(state0, goal_id=0, tactic=TacticDraft("by\nhave h1 : Or p p := sorry\nsorry"))
+        self.assertEqual(state1b.goals, [
+            Goal(
+                [Variable(name="p", t="Prop")],
+                target="p ∨ p",
+            ),
+            Goal(
+                [
+                    Variable(name="p", t="Prop"),
+                    Variable(name="h1", t="p ∨ p"),
+                ],
+                target="p → p",
+            ),
+        ])
+
 
     def test_env_add_inspect(self):
         server = Server()

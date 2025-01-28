@@ -143,5 +143,11 @@ class TacticExpr:
     Assigns an expression to the current goal
     """
     expr: str
+@dataclass(frozen=True)
+class TacticDraft:
+    """
+    Assigns an expression to the current goal
+    """
+    expr: str
 
-Tactic: TypeAlias = str | TacticHave | TacticLet | TacticCalc | TacticExpr
+Tactic: TypeAlias = str | TacticHave | TacticLet | TacticCalc | TacticExpr | TacticDraft
