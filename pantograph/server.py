@@ -161,7 +161,7 @@ class Server:
         self.proc.setecho(False) # Do not send any command before this.
         try:
             ready = await self.proc.readline_async() # Reads the "ready."
-            assert ready.rstrip() == "ready.", f"Server failed to emit ready signal: {ready}; Maybe the project needs to be rebuilt"
+            assert ready.rstrip() == "ready.", f"Server failed to emit ready signal: {ready}; Project Lean version must match Pantograph's Lean version exactly or, it maybe needs to be rebuilt"
         except pexpect.exceptions.TIMEOUT as exc:
             raise RuntimeError("Server failed to emit ready signal in time") from exc
 
