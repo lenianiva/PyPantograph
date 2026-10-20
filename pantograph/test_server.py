@@ -7,7 +7,7 @@ class TestServer(unittest.TestCase):
         """
         NOTE: Update this after upstream updates.
         """
-        self.assertEqual(get_version(), "0.3.15")
+        self.assertEqual(get_version(), "0.3.19")
 
     def test_server_init_del(self):
         import warnings
@@ -232,7 +232,7 @@ class TestServer(unittest.TestCase):
         definitions = server.env_catalog(module_prefix="Init", invert_filter=True)
         self.assertEqual(
             set(definitions),
-            {'dfoo._sunfold', 'dfoo._unsafe_rec', 'dfoo', 'dfoo.match_1'}
+            {'dfoo._sunfold', 'dfoo._unsafe_rec', 'dfoo', 'dfoo.match_1', 'dfoo._f'}
         )
 
     def test_env_parse(self):
@@ -259,16 +259,16 @@ class TestServer(unittest.TestCase):
             ])
 
     def test_load_header(self):
-        server = Server(imports=[])
-        server.load_header("import Init\nopen Nat")
-        state0 = server.goal_start("forall (n : Nat), n + 1 = n.succ")
+        server = Server()
+        server.load_header("open Nat")
+        state0 = server.goal_start("forall (n : Nat), n + 1 = Nat.succ n")
         state1 = server.goal_tactic(state0, "intro")
         state2 = server.goal_tactic(state1, "apply add_one")
         self.assertTrue(state2.is_solved)
 
     def test_check_compile(self):
         server = Server()
-        unit, = server.check_compile("example (p: Prop) : p -> p := id")
+        unit, = server.check_compile("example (p: Prop) : p -> p := fun x => x")
         self.assertEqual(unit.messages, [])
         unit, = server.check_compile("example (p: Prop) : p -> p := 1")
         self.assertEqual(unit.messages, [Message(
@@ -280,7 +280,7 @@ class TestServer(unittest.TestCase):
             "  p → p : Prop"
         )
         ])
-        unit, = server.check_compile("import Lean\nexample (p: Prop) : p -> p := id", read_header=True)
+        unit, = server.check_compile("import Lean\nexample (p: Prop) : p -> p := fun x => x", read_header=True)
         self.assertEqual(unit.messages, [])
 
     def test_load_definitions(self):
