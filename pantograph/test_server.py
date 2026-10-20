@@ -7,7 +7,7 @@ class TestServer(unittest.TestCase):
         """
         NOTE: Update this after upstream updates.
         """
-        self.assertEqual(get_version(), "0.3.16")
+        self.assertEqual(get_version(), "0.3.19")
 
     def test_server_init_del(self):
         import warnings
@@ -259,9 +259,9 @@ class TestServer(unittest.TestCase):
             ])
 
     def test_load_header(self):
-        server = Server(imports=[])
-        server.load_header("import Init\nopen Nat")
-        state0 = server.goal_start("forall (n : Nat), n + 1 = n.succ")
+        server = Server()
+        server.load_header("open Nat")
+        state0 = server.goal_start("forall (n : Nat), n + 1 = Nat.succ n")
         state1 = server.goal_tactic(state0, "intro")
         state2 = server.goal_tactic(state1, "apply add_one")
         self.assertTrue(state2.is_solved)
